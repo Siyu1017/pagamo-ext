@@ -1,0 +1,323 @@
+*[data-tooltip] {
+    position: relative;
+}
+
+*[data-tooltip]:hover:after,
+*[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+}
+
+*[data-tooltip]:after,
+*[data-tooltip]:before {
+    position: absolute;
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    opacity: 0;
+    visibility: hidden;
+    -webkit-transition: 0.15s ease-in;
+    transition: 0.15s ease-in;
+    z-index: 5;
+}
+
+*[data-tooltip]:after {
+    content: attr(data-tooltip);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 4px 9px;
+    text-align: center;
+    color: #fff;
+    font-size: 12px;
+    line-height: 16px;
+    white-space: nowrap;
+    border-radius: 4px;
+    -webkit-transform: translate(-50%, -8px);
+    transform: translate(-50%, -8px);
+}
+
+*[data-tooltip]:before {
+    content: '';
+    top: auto;
+    bottom: 100%;
+    border: 4px solid transparent;
+    -webkit-transform: translateX(-50%);
+    transform: translateX(-50%);
+    border-top-color: rgba(0, 0, 0, 0.8);
+}
+
+*[data-tooltip][data-position="bottom"]:after {
+    top: 100%;
+    bottom: auto;
+    -webkit-transform: translate(-50%, 8px);
+    transform: translate(-50%, 8px);
+}
+
+*[data-tooltip][data-position="bottom"]:before {
+    top: 100%;
+    bottom: auto;
+    border-color: transparent;
+    border-bottom-color: rgba(0, 0, 0, 0.8);
+}
+
+*[data-tooltip][data-position="left"]:after {
+    left: 0;
+    bottom: auto;
+    top: 50%;
+    margin-left: -6px;
+    -webkit-transform: translate(-100%, -50%);
+    transform: translate(-100%, -50%);
+}
+
+*[data-tooltip][data-position="left"]:before {
+    left: 0;
+    bottom: auto;
+    top: 50%;
+    -webkit-transform: translate(-100%, -50%);
+    transform: translate(-100%, -50%);
+    border-color: transparent;
+    border-left-color: rgba(0, 0, 0, 0.8);
+}
+
+*[data-tooltip][data-position="right"]:after {
+    left: 100%;
+    bottom: auto;
+    top: 50%;
+    -webkit-transform: translate(8px, -50%);
+    transform: translate(8px, -50%);
+}
+
+*[data-tooltip][data-position="right"]:before {
+    left: 100%;
+    top: 50%;
+    bottom: auto;
+    -webkit-transform: translate(0, -50%);
+    transform: translate(0, -50%);
+    border-color: transparent;
+    border-right-color: rgba(0, 0, 0, 0.8);
+}
+
+.pgo-status {
+    position: fixed;
+    top: 4rem;
+    right: 1rem;
+    width: 240px;
+    height: fit-content;
+    overflow: hidden;
+    border-radius: 6px;
+    z-index: 99999;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 4px 16px 0px;
+    background: #fff;
+    box-sizing: border-box;
+    font-weight: normal;
+}
+
+.pgo-status-list {
+    height: fit-content;
+    padding: 0 8px;
+    cursor: default;
+    max-height: 360px;
+    overflow: auto;
+    display: block;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .2) !important;
+    background: #fff;
+}
+
+.pgo-status * {
+    transition: none;
+    font-size: 16px;
+    user-select: none !important;
+    cursor: default;
+    font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica Neue, sans-serif;
+}
+
+.pgo-status-noitem {
+    text-align: center;
+    margin: 4px 0;
+    padding: 4px 12px;
+    display: block;
+    font-style: italic;
+    color: #999;
+}
+
+.pgo-status-item {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+    padding: 4px 12px;
+    border-radius: 4px;
+    gap: 6px;
+    justify-content: space-between;
+}
+
+.pgo-status-item:hover {
+    background: rgb(241, 241, 241);
+}
+
+.pgo-status-title {
+    color: rgb(84,84,84);
+    text-align: center;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 10px 8px;
+    border-bottom: rgb(213,213,213) .5px solid;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-bottom: 8px;
+    z-index: 9;
+}
+
+.pgo-status::-webkit-scrollbar, .pgo-status *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    border-radius: 0px;
+    background: none;
+}
+
+.pgo-status::-webkit-scrollbar-thumb, .pgo-status *::-webkit-scrollbar-thumb {
+    background: rgba(171, 171, 171, 0.5);
+    min-height: 50px;
+    min-width: 50px;
+    border-radius: 10px;
+}
+
+.pgo-status::-webkit-scrollbar-thumb:hover, .pgo-status *::-webkit-scrollbar-thumb:hover {
+    background: rgba(171, 171, 171, 1);
+    min-height: 50px;
+    min-width: 50px;
+    border-radius: 10px;
+}
+
+.pgo-status::-webkit-scrollbar-corner, .pgo-status *::-webkit-scrollbar-corner {
+    background: none;
+}
+
+.pgo-status-item.done .pgo-status-item-status::before, .pgo-status-item.error .pgo-status-item-status::before, .pgo-status-item.loading .pgo-status-item-status {
+    width: 18px;
+    height: 18px;
+    display: block;
+    content: '';
+    -webkit-mask-repeat: no-repeat;
+    -webkit-user-drag: none;
+    -webkit-mask-position: center;
+    -webkit-mask-size: 18px;
+}
+
+.pgo-status-item.done .pgo-status-item-status::before {
+    background: rgb(25, 135, 84);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' class='w-6 h-6'%3E%3Cpath fill-rule='evenodd' d='M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z' clip-rule='evenodd' /%3E%3C/svg%3E%0A");
+}
+
+.pgo-status-item.error .pgo-status-item-status::before {
+    background: rgb(220, 53, 69);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' class='w-6 h-6'%3E%3Cpath fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z' clip-rule='evenodd' /%3E%3C/svg%3E%0A");
+}
+
+.pgo-status-item.loading .pgo-status-item-status {
+    --primary-color: rgb(13, 110, 253);
+}
+
+.pgo-status-item.loading .pgo-status-item-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pgo-status-item.loading .pgo-status-item-status .spinner-icon {
+    width: 16px;
+    height: 16px;
+    border-top-color: #fff;
+    border-left-color: #fff;
+}
+
+.pgo-status-item.loading .pgo-status-item-status .spinner {
+    position: revert;
+    margin: 0 4px;
+}
+
+.pgo-status-item.loading .pgo-status-item-status .spinner {
+    display: block;
+}
+
+.pgo-status-item.loading .pgo-status-item-status .spinner-icon {
+    width: 14px;
+    height: 14px;
+    box-sizing: border-box;
+    border: solid 2px transparent;
+    border-top-color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    border-radius: 50%;
+    -webkit-animation: spinner 400ms linear infinite;
+    animation: spinner 400ms linear infinite;
+    opacity: 1 !important;
+}
+
+@-webkit-keyframes spinner {
+    0% {
+        -webkit-transform: rotate(0deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+@keyframes spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.pgo-status-footer {
+    color: rgb(84,84,84);
+    text-align: center;
+    position: sticky;
+    bottom: -.5px;
+    background: #fff;
+    padding: 10px 2px;
+    border-top: rgb(213,213,213) 0.5px solid;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-top: 8px;
+    z-index: 9;
+}
+
+.pgo-status-clear {
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 8px 12px;
+    background: rgb(13, 110, 253);
+    color: #fff !important;
+    border-radius: 6px;
+}
+
+.pgo-status-item-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-grow: 1;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pgo-status-item-timer {
+    min-width: fit-content;
+    width: 240px;
+    flex: 1;
+    text-align: right;
+}
+
+.pgo-status-item-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
