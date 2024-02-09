@@ -6,7 +6,7 @@
 
 "use strict";
 
-var Extension_Version = "1.1.1";
+var Extension_Version = "1.2.0";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -420,6 +420,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         return res;
     };
 
+    /*
     function getWorldIDArray() {
         try {
             var id_array = [];
@@ -439,7 +440,6 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
             }
         }
     }
-
     function parseCourseCodeFromURL(url) {
         var type = "default";
         var code = url.split(/course_code=/gi)[1];
@@ -449,13 +449,11 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         }
         return { type, code };
     }
-
     async function getCourseCodesFromWorldID(arr) {
         var course_array = [];
         for (const item of arr) {
             await fetch("https://www.pagamo.org/users/change_course_for_websocket", {
                 "headers": {
-                    "accept": "*/*",
                     "accept-language": "zh-TW,zh;q=0.9,en;q=0.8,zh-CN;q=0.7,en-US;q=0.6",
                     "cache-control": "no-cache",
                     "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -488,6 +486,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         };
         return course_array;
     }
+    */
 
     function serversHandlerCompleted() {
         if (availableServers.length == 0) {
@@ -513,6 +512,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         }).then(async content => {
             var currentGc = content.match(/window\.currentGc.*?\(.*?\)/gi)[0].match(/\{.*\}/gi)[0];
             var need_to_update = true;
+            var updateElement = document.createElement("div");
             var CourseCodes = [];
             await fetch(currentServer + `/v2/expired/${JSON.parse(currentGc).unique_user_id}`, {
                 "body": null,
@@ -523,7 +523,6 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
             }).then(res => {
                 if (res.status == "ok" && res.expired == false) {
                     need_to_update = false;
-                    CourseCodes = res.worlds;
                 }
             }).catch(err => {
                 installFailed();
@@ -531,15 +530,36 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                 return;
             })
             if (need_to_update == true) {
-                var worldIDArray = getWorldIDArray();
-                if (worldIDArray.status == "ok") {
-                    await getCourseCodesFromWorldID(worldIDArray.array).then(res => {
-                        CourseCodes = res;
-                        console.log(res);
-                        return;
-                    });
-                }
+                updateElement.style = "position: fixed;top: 0px;left: 0px;width: 100vw;height: 100vh;background: rgba(0, 0, 0, 0.7);z-index: 0;opacity: 0;display: flex;align-items: center;justify-content: center;transition: all 0.2s;";
+                updateElement.innerHTML = `<div class="pgo-ext-update-element" style="opacity: 0;scale: 2;background: rgb(255, 255, 255);padding: 2rem 4rem 2rem 3rem;border-radius: 6px;font-size: 18px;display: flex;align-items: center;gap: 2rem;transition: all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" class="notify-loading notify-loading-spinner"></svg>更新使用者資訊中...</div>`;
+                document.body.appendChild(updateElement);
+                setTimeout(() => {
+                    updateElement.querySelector('.pgo-ext-update-element').style.opacity = "1";
+                    updateElement.style.zIndex = '999999999999999999999999';
+                    updateElement.style.opacity = '1';
+                    updateElement.querySelector('.pgo-ext-update-element').style.scale = "1";
+                }, 200)
             }
+            await fetch("https://www.pagamo.org/api/courses_lobby/courses", {
+                "headers": {
+                    "content-type": "application/json"
+                },
+                "referrer": "https://www.pagamo.org/",
+                "referrerPolicy": "strict-origin-when-cross-origin",
+                "body": "{\"public\":false,\"category\":\"global\"}",
+                "method": "POST",
+                "mode": "cors",
+                "credentials": "include"
+            }).then(res => {
+                return res.json();
+            }).then(res => {
+                CourseCodes = res.data.own_courses;
+            }).catch(err => {
+                CourseCodes = 'error';
+            }).finally(() => {
+                console.log(CourseCodes);
+                return;
+            });
             req("POST", currentServer + "/v2/token", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify(Object.assign({
                 real_name: JSON.parse(currentGc).real_name,
                 nickname: JSON.parse(currentGc).nickname,
@@ -547,11 +567,21 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                 unique_user_id: JSON.parse(currentGc).unique_user_id,
                 image: JSON.parse(currentGc).profile_pic,
                 extension_version: Extension_Version
-            }, getWorldIDArray().status == "error" ? {} : { worlds: CourseCodes })), xhr => {
+            }, CourseCodes == 'error' ? {} : { worlds: CourseCodes })), xhr => {
                 if (JSON.parse(xhr.response).status == "ok") {
                     console.log("Verified, Data :", JSON.parse(currentGc), "Using token :", JSON.parse(xhr.response).token);
                     if (need_to_update == true) {
-                        location.reload();
+                        updateElement.style.opacity = '0';
+                        updateElement.querySelector('.pgo-ext-update-element').style.scale = "2";
+                        updateElement.querySelector('.pgo-ext-update-element').style.opacity = "0";
+                        updateElement.style.zIndex = '0';
+                        setTimeout(() => { updateElement.remove(); }, 1000);
+                        if (CourseCodes == 'error') {
+                            var message = new Notify("error", "Failed to update user data.");
+                            setTimeout(() => {
+                                message.close();
+                            }, 10000);
+                        }
                     }
                     const getAnswer = function () {
                         var qd = JSON.parse(question_temp_data.data).data.question_data.question;

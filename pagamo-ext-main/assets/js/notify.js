@@ -30,7 +30,6 @@ class Notify {
             loadingBar: icon == "loading" ? true : false
         }
         var config = mergeDeep(defaultConfig, config);
-        console.log(config)
         if (!document.querySelector(".notify-container")) {
             var container = document.createElement("div");
             container.className = "notify-container";
