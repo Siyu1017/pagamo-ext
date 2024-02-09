@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "PaGamO 答案資料庫",
     "description": "搜尋 / 新增 PaGamO 答案",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "icons": {
         "32": "./logo/logo-32.png"
     },
@@ -40,6 +40,7 @@
     "content_scripts": [
         {
             "js": [
+                "./assets/js/notify.js",
                 "./assets/js/owo.js",
                 "./assets/js/progress.js",
                 "./assets/js/pagamo.js",
@@ -47,6 +48,7 @@
                 "./assets/js/blob-1.0.1.js"
             ],
             "css": [
+                "./assets/css/notify.css",
                 "./assets/css/progress.css",
                 "./assets/css/pagamo.css"
             ],
