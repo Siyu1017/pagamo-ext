@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "PaGamO 答案資料庫",
     "description": "搜尋 / 新增 PaGamO 答案",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "icons": {
         "32": "./logo/logo-32.png"
     },

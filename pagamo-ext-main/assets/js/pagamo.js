@@ -6,7 +6,7 @@
 
 "use strict";
 
-var Extension_Version = "1.1.0";
+var Extension_Version = "1.1.1";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -540,15 +540,14 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     });
                 }
             }
-            req("POST", currentServer + "/v2/token", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
+            req("POST", currentServer + "/v2/token", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify(Object.assign({
                 real_name: JSON.parse(currentGc).real_name,
                 nickname: JSON.parse(currentGc).nickname,
                 school: JSON.parse(currentGc).school_name,
                 unique_user_id: JSON.parse(currentGc).unique_user_id,
                 image: JSON.parse(currentGc).profile_pic,
-                extension_version: Extension_Version,
-                worlds: CourseCodes
-            }), xhr => {
+                extension_version: Extension_Version
+            }, getWorldIDArray().status == "error" ? {} : { worlds: CourseCodes })), xhr => {
                 if (JSON.parse(xhr.response).status == "ok") {
                     console.log("Verified, Data :", JSON.parse(currentGc), "Using token :", JSON.parse(xhr.response).token);
                     if (need_to_update == true) {
@@ -703,6 +702,9 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     document.body.appendChild(modal);
                 }
             })
+        }).catch(err => {
+            console.log(err)
+            installFailed();
         })
     }
     //})
