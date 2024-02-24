@@ -1,12 +1,12 @@
 /**
  * PaGamO Answer Database
- * Copyright 2023 (c) Siyu1017
+ * Copyright 2023 - 2024 (c) Siyu1017
  * All rights reserved.
  */
 
 "use strict";
 
-var Extension_Version = "1.2.0";
+var Extension_Version = "1.3.0";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -594,14 +594,16 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                         req("POST", currentServer + "/v2/g", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
                             qid: qd.render_info.q_info_id,
                             qt: qd.render_info.content.replace(/<\/?.+?>/g, ""),
-                            qo: qd.render_info.content.replace(/<\/?.+?>/g, "") == "" && qd.render_info.selections
+                            qo: qd.render_info.content.replace(/<\/?.+?>/g, "") == "" && qd.render_info.selections,
+                            version: Extension_Version
                         }), xhr => {
                             if (xhr.readyState === 4 && xhr.status === 200) {
                                 mode.random = localStorage.getItem("pgo-ext-mode") == "true" ? true : false;
                                 var abs = JSON.parse(JSON.parse(xhr.response)["correct"]);
-                                if (JSON.parse(JSON.parse(xhr.response)["type"] == "has_id")) {
+                                var anwser_btn_attrname = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
+                                if (JSON.parse(JSON.parse(xhr.response)["type"] == "trusted_answer")) {
                                     que_exist = true
-                                } else if (JSON.parse(JSON.parse(xhr.response)["type"] == "id_not_found")) {
+                                } else {
                                     que_exist = false;
                                 }
                                 if (qd.answer_type == pkg.ansTypes[0] && qd.type == pkg.Types[0] && abs.length > 0) {
@@ -618,7 +620,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                                         for (let u = 0; u < t.length; u++) {
                                             if (t[u].getAttribute("data-org-position") == order[abs[i]]) {
                                                 $("[data-real-choice]", true)[u].click();
-                                                $("[data-real-choice]", true)[u].setAttribute("pgo-ext-active-btn", "");
+                                                $("[data-real-choice]", true)[u].setAttribute(anwser_btn_attrname, "");
                                             }
                                         }
                                     }
@@ -626,7 +628,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                                 } else if (abs.length > 0) {
                                     for (let i = 0; i < abs.length; i++) {
                                         $("[data-real-choice]", true)[abs[i]].click();
-                                        $("[data-real-choice]", true)[abs[i]].setAttribute("pgo-ext-active-btn", "");
+                                        $("[data-real-choice]", true)[abs[i]].setAttribute(anwser_btn_attrname, "");
                                     }
                                     if (mode.auto_complete == true && mode.contests == false || mode.random == true && mode.contests == false) $("#answer-panel-submit-button").click();
                                 } else {

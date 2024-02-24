@@ -160,12 +160,18 @@ label.switch {
     backdrop-filter: blur(2px);
 }
 
-[pgo-ext-active-btn] {
-    border: 5px solid #4285f4 !important;
+[pgo-ext-trusted-btn] {
+    border: 5px solid rgb(66, 133, 244) !important;
     border-radius: 5px;
 }
 
-.ext-modal-warn, .ext-modal-text {
+[pgo-ext-distrusted-btn] {
+    border: 5px solid rgb(255, 230, 108) !important;
+    border-radius: 5px;
+}
+
+.ext-modal-warn,
+.ext-modal-text {
     padding: 5px 10px;
     font-size: 120%;
 }
