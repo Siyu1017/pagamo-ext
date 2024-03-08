@@ -6,7 +6,7 @@
 
 "use strict";
 
-var Extension_Version = "1.3.0";
+var Extension_Version = "1.4.0";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -380,7 +380,8 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     <div>
                         <div>更新內容 :</div>
                         <ul style="margin: 5px 0 10px 30px;">${updates}</ul>
-                    </div>                
+                    </div>  
+                    <div>⚠️請在安裝最新版本後，將舊版移除，以避免發生問題⚠️</div>              
                     <div>${levels[extension.level]}至<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/">此處</a>下載新的版本</div>
                 </div>
             </div>
