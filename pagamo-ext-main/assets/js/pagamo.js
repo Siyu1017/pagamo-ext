@@ -380,9 +380,8 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     <div>
                         <div>更新內容 :</div>
                         <ul style="margin: 5px 0 10px 30px;">${updates}</ul>
-                    </div>  
-                    <div>⚠️請在安裝最新版本後，將舊版移除，以避免發生問題⚠️</div>              
-                    <div>${levels[extension.level]}至<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/">此處</a>下載新的版本</div>
+                    </div>
+                    <div>${levels[extension.level]}至<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/">此處</a>下載新的版本，並於安裝最新版本後，將舊版移除，以避免發生問題</div>
                 </div>
             </div>
             <div class="close" onclick="this.parentNode.parentNode.remove();"></div>
