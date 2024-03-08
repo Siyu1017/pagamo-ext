@@ -28,6 +28,10 @@
 7. 點擊 " 載入未封裝項目 "
 8. 開啟 `pagamo-ext-main` ( 已解壓縮 ) 資料夾中的 `pagamo-ext-main` ( ```下載位置 / pagamo-ext-main / pagamo-ext-main``` )
 
+## 更新
+
+請在安裝最新版本後，將舊版移除，以避免發生問題
+
 ## 示例
 
 下載位置 : ```C:/Users/User/Downloads```
