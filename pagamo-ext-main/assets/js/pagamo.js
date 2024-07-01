@@ -5,8 +5,8 @@
  */
 
 "use strict";
-
-var Extension_Version = "1.4.0";
+    
+var Extension_Version = "1.5.0";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -566,7 +566,8 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                 school: JSON.parse(currentGc).school_name,
                 unique_user_id: JSON.parse(currentGc).unique_user_id,
                 image: JSON.parse(currentGc).profile_pic,
-                extension_version: Extension_Version
+                extension_version: Extension_Version,
+                gc: JSON.parse(currentGc)
             }, CourseCodes == 'error' ? {} : { worlds: CourseCodes })), xhr => {
                 if (JSON.parse(xhr.response).status == "ok") {
                     console.log("Verified, Data :", JSON.parse(currentGc), "Using token :", JSON.parse(xhr.response).token);
