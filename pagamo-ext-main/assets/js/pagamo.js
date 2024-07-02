@@ -5,8 +5,8 @@
  */
 
 "use strict";
-    
-var Extension_Version = "1.5.0";
+
+var Extension_Version = "1.6.0";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -353,12 +353,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
     }
 
     fetch("https://siyu1017.github.io/pagamo-ext/update.json").then(res => {
-        if (!res.ok) {
-            var modal = document.createElement("div");
-            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法檢測更新</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
-            modal.className = "ext-modal";
-            document.body.appendChild(modal);
-        } else {
+        if (res.ok) {
             return res.json();
         }
     }).then(extension => {
@@ -390,6 +385,13 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
             document.body.appendChild(modal);
             return false;
         }
+    }).catch(err => {
+        var modal = document.createElement("div");
+        modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法檢測更新，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+        modal.className = "ext-modal";
+        document.body.appendChild(modal);
+        installFailed();
+        throw new Error("Failed to install");
     })
 
     fetch("https://siyu1017.github.io/pagamo-ext/servers.json").then(res => {
@@ -399,7 +401,12 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         // serversHandler(servers);
         serversHandlerCompleted();
     }).catch(err => {
+        var modal = document.createElement("div");
+        modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法獲取伺服器列表，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+        modal.className = "ext-modal";
+        document.body.appendChild(modal);
         installFailed();
+        throw new Error("Failed to install");
     })
 
     function randomNumber(n, arr) {
@@ -491,7 +498,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
     function serversHandlerCompleted() {
         if (availableServers.length == 0) {
             var modal = document.createElement("div");
-            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無可用的伺服器</div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無可用的伺服器，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
             modal.className = "ext-modal";
             document.body.appendChild(modal);
             installFailed();
@@ -730,7 +737,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                 } else {
                     installFailed();
                     var modal = document.createElement("div");
-                    modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 驗證失敗，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+                    modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 驗證失敗，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
                     modal.className = "ext-modal";
                     document.body.appendChild(modal);
                 }
