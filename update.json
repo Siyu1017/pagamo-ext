@@ -1,5 +1,5 @@
 {
     "version": "1.5.0",
-    "content": ["修改 token 驗證頁面所需 payload 內容", "前往<a href='https://github.com/Siyu1017/pagamo-ext/blob/main/TIP.md'>此處</a>查看更多"],
+    "content": ["修改 token 驗證頁面所需 payload 內容", "前往<a href='https://github.com/Siyu1017/pagamo-ext/blob/main/TIP.md' target='_blank'>此處</a>查看更多"],
     "level": "required"
 }
