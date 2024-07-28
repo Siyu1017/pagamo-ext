@@ -6,7 +6,7 @@
 
 "use strict";
 
-var Extension_Version = "2.0.0";
+var Extension_Version = "2.0.1";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -619,7 +619,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
             var avatarElements = ['.pgo-style-avatar-Bniy_a', '.prev_selfie'];
             var nicknameElements = ['.pgo-style-user-name-2VKMNi', '.js-user-nickname', '#profile_name'];
             var moneyElements = ['#user_money', '.pgo-Money-money-text-2c-pgp', '.frame_money'];
-            async function clientChange() {
+            async function clientChange(fromExtension = true) {
                 if (selfChange == true) {
                     return selfChange = false;
                 }
@@ -630,7 +630,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                             selfChange = true;
                         })
                     })
-                } else {
+                } else if (fromExtension == true) {
                     avatarElements.forEach(selector => {
                         document.querySelectorAll(selector).forEach(avatar => {
                             avatar.style.backgroundImage = `url("${JSON.parse(currentGc).profile_pic}")`;
@@ -645,7 +645,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                             selfChange = true;
                         })
                     })
-                } else {
+                } else if (fromExtension == true) {
                     nicknameElements.forEach(selector => {
                         document.querySelectorAll(selector).forEach(nickname => {
                             nickname.innerHTML = JSON.parse(currentGc).nickname;
@@ -660,7 +660,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                             selfChange = true;
                         })
                     })
-                } else {
+                } else if (fromExtension == true) {
                     var currentMoney = 0;
                     await fetch("https://www.pagamo.org/users/user_information.js", {
                         "headers": {
@@ -690,7 +690,9 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     })
                 }
             }
-            const ob = new MutationObserver(clientChange);
+            const ob = new MutationObserver(() => {
+                clientChange(false);
+            });
             ob.observe(document.body, {
                 childList: true,
                 subtree: true
