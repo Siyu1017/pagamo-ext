@@ -6,7 +6,7 @@
 
 "use strict";
 
-var Extension_Version = "1.6.0";
+var Extension_Version = "2.0.0";
 
 function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -120,9 +120,6 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         auto_complete: false
     };
 
-    pkg.ansTypes = ["alphabet", "trueFalse"]; // alphabet 選擇題
-    pkg.Types = ["choice", "true_or_false"]; // choice 選擇題
-
     /**
      * ansTypes ? alphabet => get(answer_button_count) => get(answers_count) => getAnswer("alphabet", abc, ac); set("options", selections);
      * ansTypes ? alphabet => get(answer_button_count) => get(answers_count) => getAnswer("alphabet", abc, ac); set("options", selections);
@@ -144,7 +141,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
     var question = null;
     var quetype = 0;
     var option = [];
-    var que_exist = false;
+    var questionExist = false;
     var question_temp_data = {};
 
     var loadingNotify = new Notify("loading", "Installing PaGamO plug-in extension...", {
@@ -236,7 +233,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
         return s;
     }
 
-    if (localStorage.getItem('pgo-ext-show-progress') == 'true') {
+    if ('show' == false) {
         var list = initProgressList();
         var list_pos = {
             x: 0,
@@ -567,6 +564,545 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                 console.log(CourseCodes);
                 return;
             });
+
+            var mergeDeep = (target, ...sources) => {
+                if (!sources.length) return target;
+                const source = sources.shift();
+                function isObject(item) {
+                    return (item && typeof item === 'object' && !Array.isArray(item));
+                }
+                if (isObject(target) && isObject(source)) {
+                    for (const key in source) {
+                        if (isObject(source[key])) {
+                            if (!target[key]) Object.assign(target, { [key]: {} });
+                            mergeDeep(target[key], source[key]);
+                        } else {
+                            Object.assign(target, { [key]: source[key] });
+                        }
+                    }
+                }
+                return mergeDeep(target, ...sources);
+            }
+
+            var defaultSettings = {
+                appearance: {
+                    theme: 'system',
+                    topPanel: 'original',
+                    leftPanel: 'original',
+                    userMenu: 'original'
+                },
+                answeringBehavior: {
+                    random: false,
+                    autoSelect: true,
+                    autoSend: false,
+                    autoAction: false
+                },
+                clientBehavior: {
+                    nickname: false,
+                    avatar: false,
+                    money: false
+                },
+                developerTools: {
+                    pageEditor: false,
+                    networkActivity: false,
+                    beta: false
+                }
+            }
+
+            if (!localStorage.getItem('pagamo-extension-settings')) {
+                localStorage.setItem('pagamo-extension-settings', JSON.stringify(defaultSettings));
+            }
+
+            var settings = mergeDeep(defaultSettings, JSON.parse(localStorage.getItem('pagamo-extension-settings') || {}));
+
+            var selfChange = false;
+            var avatarElements = ['.pgo-style-avatar-Bniy_a', '.prev_selfie'];
+            var nicknameElements = ['.pgo-style-user-name-2VKMNi', '.js-user-nickname', '#profile_name'];
+            var moneyElements = ['#user_money', '.pgo-Money-money-text-2c-pgp', '.frame_money'];
+            async function clientChange() {
+                if (selfChange == true) {
+                    return selfChange = false;
+                }
+                if (settings.clientBehavior.avatar != false) {
+                    avatarElements.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(avatar => {
+                            avatar.style.backgroundImage = `url("${settings.clientBehavior.avatar}")`;
+                            selfChange = true;
+                        })
+                    })
+                } else {
+                    avatarElements.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(avatar => {
+                            avatar.style.backgroundImage = `url("${JSON.parse(currentGc).profile_pic}")`;
+                            selfChange = true;
+                        })
+                    })
+                }
+                if (settings.clientBehavior.nickname != false) {
+                    nicknameElements.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(nickname => {
+                            nickname.innerHTML = settings.clientBehavior.nickname;
+                            selfChange = true;
+                        })
+                    })
+                } else {
+                    nicknameElements.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(nickname => {
+                            nickname.innerHTML = JSON.parse(currentGc).nickname;
+                            selfChange = true;
+                        })
+                    })
+                }
+                if (settings.clientBehavior.money != false) {
+                    moneyElements.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(money => {
+                            money.innerHTML = settings.clientBehavior.money;
+                            selfChange = true;
+                        })
+                    })
+                } else {
+                    var currentMoney = 0;
+                    await fetch("https://www.pagamo.org/users/user_information.js", {
+                        "headers": {
+                            "content-type": "application/json"
+                        },
+                        "body": JSON.stringify({
+                            gc_id: JSON.parse(currentGc).id
+                        }),
+                        "method": "POST",
+                        "mode": "cors",
+                        "credentials": "include"
+                    });
+                    await fetch("https://www.pagamo.org/users/personal_information.json", {
+                        "method": "POST",
+                        "mode": "cors",
+                        "credentials": "include"
+                    }).then(res => {
+                        return res.json();
+                    }).then(res => {
+                        currentMoney = res.data.gamecharacter.money;
+                    });
+                    moneyElements.forEach(selector => {
+                        document.querySelectorAll(selector).forEach(money => {
+                            money.innerHTML = currentMoney;
+                            selfChange = true;
+                        })
+                    })
+                }
+            }
+            const ob = new MutationObserver(clientChange);
+            ob.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            clientChange();
+
+            var inputs = {
+                nickname: settingComponent.useInput({
+                    placeholder: '顯示名稱',
+                    value: settings.clientBehavior.nickname != false ? settings.clientBehavior.nickname : JSON.parse(currentGc).nickname,
+                    disabled: settings.clientBehavior.nickname == false
+                }, (e) => {
+                    settings.clientBehavior.nickname = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    clientChange();
+                }),
+                avatar: settingComponent.useInput({
+                    placeholder: '顯示頭像',
+                    value: settings.clientBehavior.avatar != false ? settings.clientBehavior.avatar : JSON.parse(currentGc).profile_pic,
+                    disabled: settings.clientBehavior.avatar == false
+                }, (e) => {
+                    settings.clientBehavior.avatar = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    clientChange();
+                }),
+                money: settingComponent.useInput({
+                    placeholder: '顯示金錢',
+                    disabled: settings.clientBehavior.money == false,
+                    value: settings.clientBehavior.money != false ? settings.clientBehavior.money : '',
+                }, (e) => {
+                    settings.clientBehavior.money = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    clientChange();
+                })
+            }
+
+            var switchDisabledStatus = {
+                random: false,
+                autoSelect: false,
+                autoSend: false
+            }
+
+            if (mode.contests == true) {
+                // 比賽 ( 禁用隨機模式及自動送出 )
+                settings.answeringBehavior.random = false;
+                settings.answeringBehavior.autoSend = false;
+                switchDisabledStatus.random = true;
+                switchDisabledStatus.autoSend = true;
+            } else {
+                // 非比賽 
+                if (settings.answeringBehavior.random == true) {
+                    // 隨機模式 ( 啟用自動選擇及自動送出)
+                    settings.answeringBehavior.autoSelect = true;
+                    settings.answeringBehavior.autoSend = true;
+                    switchDisabledStatus.autoSelect = true;
+                    switchDisabledStatus.autoSend = true;
+                } else if (settings.answeringBehavior.autoSelect == false) {
+                    // 未啟用自動選擇及隨機模式 => 禁用自動送出
+                    settings.answeringBehavior.autoSend = false;
+                    switchDisabledStatus.autoSend = true;
+                }
+            }
+
+            var switches = {
+                nickname: settingComponent.useSwitch({ checked: settings.clientBehavior.nickname != false }, (e) => {
+                    inputs.nickname.toggle();
+                    settings.clientBehavior.nickname = e.value == true ? inputs.nickname.value : false;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    clientChange();
+                }),
+                avatar: settingComponent.useSwitch({ checked: settings.clientBehavior.avatar != false }, (e) => {
+                    inputs.avatar.toggle();
+                    settings.clientBehavior.avatar = e.value == true ? inputs.avatar.value : false;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    clientChange();
+                }),
+                money: settingComponent.useSwitch({ checked: settings.clientBehavior.money != false }, (e) => {
+                    inputs.money.toggle();
+                    settings.clientBehavior.money = e.value == true ? inputs.money.value : false;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    clientChange();
+                }),
+                random: settingComponent.useSwitch({
+                    checked: settings.answeringBehavior.random,
+                    disabled: switchDisabledStatus.random
+                }, (e) => {
+                    // 比賽時強制禁用
+                    if (mode.contests == true) {
+                        switches.random.set('disabled', true);
+                        if (e.value != false) {
+                            switches.random.set('checked', false);
+                        }
+                        settings.answeringBehavior.random = false;
+                        return;
+                    }
+                    settings.answeringBehavior.random = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    if (e.value == true) {
+                        switches.autoSelect.set('checked', true);
+                        switches.autoSend.set('checked', true);
+                        switches.autoSelect.set('disabled', true);
+                        switches.autoSend.set('disabled', true);
+                    } else {
+                        switches.autoSelect.set('disabled', false);
+                        switches.autoSend.set('disabled', false);
+                    }
+                }),
+                autoSelect: settingComponent.useSwitch({
+                    checked: settings.answeringBehavior.autoSelect,
+                    disabled: switchDisabledStatus.autoSelect
+                }, (e) => {
+                    // 隨機模式時強制啟用
+                    if (settings.answeringBehavior.random == true) {
+                        switches.autoSelect.set('disabled', true);
+                        if (e.value != true) {
+                            switches.autoSelect.set('checked', true);
+                        }
+                        settings.answeringBehavior.autoSelect = true;
+                        return;
+                    }
+                    settings.answeringBehavior.autoSelect = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                    // 自動送出於比賽模式時強制禁用，於自動選擇模式時可用
+                    if (e.value == true && mode.contests == false) {
+                        switches.autoSend.set('disabled', false);
+                    } else {
+                        switches.autoSend.set('disabled', true);
+                        switches.autoSend.set('checked', false);
+                    }
+                }),
+                autoSend: settingComponent.useSwitch({
+                    checked: settings.answeringBehavior.autoSend,
+                    disabled: switchDisabledStatus.autoSend
+                }, (e) => {
+                    // 比賽模式時強制禁用
+                    if (mode.contests == true) {
+                        switches.autoSend.set('disabled', true);
+                        if (e.value != false) {
+                            switches.autoSend.set('checked', false);
+                        }
+                        settings.answeringBehavior.autoSend = false;
+                        return;
+                    }
+                    // 隨機模式時強制啟用
+                    if (settings.answeringBehavior.random == true) {
+                        switches.autoSend.set('disabled', true);
+                        if (e.value != true) {
+                            switches.autoSend.set('checked', true);
+                        }
+                        settings.answeringBehavior.autoSend = true;
+                        return;
+                    }
+                    // 未啟用自動選擇時強制禁用
+                    if (settings.answeringBehavior.autoSelect == false) {
+                        switches.autoSend.set('disabled', true);
+                        if (e.value != false) {
+                            switches.autoSend.set('checked', false);
+                        }
+                        settings.answeringBehavior.autoSend = false;
+                        return;
+                    }
+                    settings.answeringBehavior.autoSend = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                }),
+                autoAction: settingComponent.useSwitch({ checked: settings.answeringBehavior.autoAction }, (e) => {
+                    settings.answeringBehavior.autoAction = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                })
+            }
+
+            var buttonGroups = {
+                theme: settingComponent.useButtonGroup([
+                    {
+                        title: '系統',
+                        value: 'system'
+                    }, {
+                        title: '淺色',
+                        value: 'light'
+                    }, {
+                        title: '深色',
+                        value: 'dark'
+                    }
+                ], (e) => {
+                    panel.classList.remove('system');
+                    panel.classList.remove('light');
+                    panel.classList.remove('dark');
+                    panel.classList.add(e.value);
+                    settings.appearance.theme = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                }),
+                topPanel: settingComponent.useButtonGroup([
+                    {
+                        title: '原始',
+                        value: 'original'
+                    }, /*{
+                        title: '現代',
+                        value: 'modern'
+                    }, */{
+                        title: '隱藏',
+                        value: 'hide'
+                    }
+                ], (e) => {
+                    try {
+                        document.getElementById('title_bar').style.display = e.value == 'original' ? 'revert-layer' : 'none';
+                    } catch (e) { return console.log(e) };
+                    settings.appearance.topPanel = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                }),
+                leftPanel: settingComponent.useButtonGroup([
+                    {
+                        title: '原始',
+                        value: 'original'
+                    }, /*{
+                        title: '現代',
+                        value: 'modern'
+                    }, */{
+                        title: '隱藏',
+                        value: 'hide'
+                    }
+                ], (e) => {
+                    try {
+                        document.getElementById('map-side-menu').style.display = e.value == 'original' ? 'revert-layer' : 'none';
+                    } catch (e) { return console.log(e) };
+                    settings.appearance.leftPanel = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                }),
+                userMenu: settingComponent.useButtonGroup([
+                    {
+                        title: '原始',
+                        value: 'original'
+                    }, /*{
+                        title: '現代',
+                        value: 'modern'
+                    }, */{
+                        title: '隱藏',
+                        value: 'hide'
+                    }
+                ], (e) => {
+                    try {
+                        document.getElementById('hex_menu').style.display = e.value == 'original' ? 'revert-layer' : 'none';
+                    } catch (e) { return console.log(e) };
+                    settings.appearance.userMenu = e.value;
+                    localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                })
+            }
+
+            const settingList = [{
+                category: 'appearance',
+                categoryTitle: '外觀',
+                items: [{
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
+                    title: '佈景主題',
+                    content: [buttonGroups.theme]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /></svg>`,
+                    title: '上方導覽列',
+                    content: [buttonGroups.topPanel]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg>`,
+                    title: '左側功能選單',
+                    content: [buttonGroups.leftPanel]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20a6 6 0 0 0-12 0" /><circle cx="12" cy="10" r="4" /><circle cx="12" cy="12" r="10" /></svg>`,
+                    title: '左下角使用者選單',
+                    content: [buttonGroups.userMenu]
+                }]
+            }, {
+                category: 'answering-behavior',
+                categoryTitle: '作答行為',
+                items: [{
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="12" height="12" x="2" y="10" rx="2" ry="2"/><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6"/><path d="M6 18h.01"/><path d="M10 14h.01"/><path d="M15 6h.01"/><path d="M18 9h.01"/></svg>`,
+                    title: '隨機模式',
+                    link: 0,
+                    content: [switches.random]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" /><path d="m12 12 4 10 1.7-4.3L22 16Z" /></svg>`,
+                    title: '自動選擇答案',
+                    link: 0,
+                    content: [switches.autoSelect]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 3 9-3 9 19-9Z" /><path d="M6 12h16" /></svg>`,
+                    title: '自動送出',
+                    link: 0,
+                    content: [switches.autoSend]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path transform="rotate(90, 12, 12)" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>`,
+                    title: '自動訓練與攻擊土地 ( 未完成 )',
+                    beta: true,
+                    link: 0,
+                    content: [switches.autoAction]
+                }]
+            }, {
+                category: 'client-behavior',
+                categoryTitle: '客戶端行為 ( 無法影響實際資料 )',
+                items: [{
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21a8 8 0 0 1 10.821-7.487" /><path d="M21.378 16.626a1 1 0 0 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /><circle cx="10" cy="8" r="5" /></svg>`,
+                    title: '修改顯示名稱',
+                    beta: true,
+                    content: [switches.nickname, inputs.nickname]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>`,
+                    title: '修改顯示頭像',
+                    beta: true,
+                    content: [switches.avatar, inputs.avatar]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /><path d="M12 18V6" /></svg>`,
+                    title: '修改顯示金錢',
+                    beta: true,
+                    content: [switches.money, inputs.money]
+                }]
+            }, {
+                category: 'developer-tools',
+                categoryTitle: '開發人員工具 ( 未完成 )',
+                items: [{
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
+                    title: '頁面編輯器',
+                    link: 0,
+                    content: [settingComponent.useSwitch({ checked: false }, (e) => {
+                        settings.developerTools.pageEditor = e.value;
+                        if (e.value == true) {
+                            document.body.setAttribute('contenteditable', true);
+                        } else {
+                            document.body.setAttribute('contenteditable', false);
+                        }
+                    })]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+                    title: '紀錄網路活動',
+                    link: 0,
+                    content: [settingComponent.useSwitch({ checked: false })]
+                }, {
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><path d="M8.5 2h7" /><path d="M7 16h10" /></svg>`,
+                    title: '測試版',
+                    link: 0,
+                    content: [settingComponent.useSwitch({ checked: false })]
+                }]
+            }, {
+                category: 'helper',
+                categoryTitle: '幫助',
+                items: [{
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>`,
+                    title: '使用教學',
+                    content: [],
+                    type: 'button',
+                    handler: () => {
+
+                    }
+                }]
+            }]
+
+            var layer = document.createElement('div');
+            var panel = new settingPanel(settingList);
+            layer.style = 'all: initial;';
+            layer.appendChild(panel);
+            document.documentElement.appendChild(layer);
+
+            var setting = document.createElement("div");
+            setting.classList.add("extension-setting");
+            setting.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" style="width: 28px;height: 28px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cog"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg>`;
+            setting.style = 'border-radius: 12px;display: flex;align-items: center;justify-content: center;width: 42px;height: 42px;';
+            setting.addEventListener('click', () => {
+                panel.classList.toggle('active');
+                if (panel.classList.contains('active')) {
+                    panel.querySelector('.extension-setting-search-box').focus();
+                }
+            })
+            document.body.appendChild(setting);
+
+            document.onkeydown = function (e) {
+                var e = e || window.event;
+                if (e.key === "Escape" || e.key === "Esc" || e.keyCode == 27) {
+                    panel.classList.remove('active');
+                }
+            };
+
+            // Setup button group
+            if (Object.keys(buttonGroups.theme.list()).includes(settings.appearance.theme)) {
+                buttonGroups.theme.select(settings.appearance.theme);
+            } else {
+                buttonGroups.theme.select(defaultSettings.appearance.theme);
+            }
+
+            if (Object.keys(buttonGroups.topPanel.list()).includes(settings.appearance.topPanel)) {
+                buttonGroups.topPanel.select(settings.appearance.topPanel);
+            } else {
+                buttonGroups.topPanel.select(defaultSettings.appearance.topPanel);
+            }
+
+            if (Object.keys(buttonGroups.leftPanel.list()).includes(settings.appearance.leftPanel)) {
+                buttonGroups.leftPanel.select(settings.appearance.leftPanel);
+            } else {
+                buttonGroups.leftPanel.select(defaultSettings.appearance.leftPanel);
+            }
+
+            if (Object.keys(buttonGroups.userMenu.list()).includes(settings.appearance.userMenu)) {
+                buttonGroups.userMenu.select(settings.appearance.userMenu);
+            } else {
+                buttonGroups.userMenu.select(defaultSettings.appearance.userMenu);
+            }
+
+            // Temp 
+
+            try {
+                document.getElementById('title_bar').style.display = settings.appearance.topPanel == 'original' ? 'revert-layer' : 'none';
+                document.getElementById('map-side-menu').style.display = settings.appearance.leftPanel == 'original' ? 'revert-layer' : 'none';
+                document.getElementById('hex_menu').style.display = settings.appearance.userMenu == 'original' ? 'revert-layer' : 'none';
+            } catch (e) { return console.log(e) }
+
+            const supportAnswerTypes = ["alphabet", "trueFalse"];
+            const supportQuestionTypes = ["choice", "true_or_false"];
+
             req("POST", currentServer + "/v2/token", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify(Object.assign({
                 real_name: JSON.parse(currentGc).real_name,
                 nickname: JSON.parse(currentGc).nickname,
@@ -591,65 +1127,91 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                             }, 10000);
                         }
                     }
-                    const getAnswer = function () {
-                        var qd = JSON.parse(question_temp_data.data).data.question_data.question;
-                        if (pkg.ansTypes.indexOf(qd.answer_type) < 0 || pkg.Types.indexOf(qd.type) < 0) {
-                            return console.log(`不支援題目類型 ( ${qd.type} ), 答案類型 ( ${qd.answer_type} )`);
+
+                    ["alphabet", "trueFalse"]; // alphabet 選擇題 ( answer )
+                    ["choice", "true_or_false"]; // choice 選擇題 ( question )
+
+                    function clickSendButton() {
+                        // 比賽時不執行
+                        if (mode.contests == true) return;
+                        // 非比賽時且為隨機模式或自動送出模式
+                        if (settings.answeringBehavior.random == true || settings.answeringBehavior.autoSend == true) {
+                            $("#answer-panel-submit-button").click();
                         }
-                        if (qd.answer_type == pkg.ansTypes[0] && qd.type == pkg.Types[0]) { // 選擇題
-                            console.log(`答案總數 : ${qd.render_info.answers_count}`);
+                    }
+
+                    function getAnswer() {
+                        const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
+                        if (supportAnswerTypes.indexOf(questionData.answer_type) < 0 || supportQuestionTypes.indexOf(questionData.type) < 0) {
+                            return console.log(`不支援題目類型 ( ${questionData.type} ), 答案類型 ( ${questionData.answer_type} )`);
+                        }
+                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) { // 選擇題
+                            console.log(`答案總數 : ${questionData.render_info.answers_count}`);
                         }
                         req("POST", currentServer + "/v2/g", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
-                            qid: qd.render_info.q_info_id,
-                            qt: qd.render_info.content.replace(/<\/?.+?>/g, ""),
-                            qo: qd.render_info.content.replace(/<\/?.+?>/g, "") == "" && qd.render_info.selections,
+                            qid: questionData.render_info.q_info_id,
+                            qt: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                            qo: questionData.render_info.content.replace(/<\/?.+?>/g, "") == "" && questionData.render_info.selections,
                             version: Extension_Version
                         }), xhr => {
                             if (xhr.readyState === 4 && xhr.status === 200) {
-                                mode.random = localStorage.getItem("pgo-ext-mode") == "true" ? true : false;
-                                var abs = JSON.parse(JSON.parse(xhr.response)["correct"]);
-                                var anwser_btn_attrname = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
-                                if (JSON.parse(JSON.parse(xhr.response)["type"] == "trusted_answer")) {
-                                    que_exist = true
+                                var answerList = JSON.parse(JSON.parse(xhr.response)["correct"]);
+                                var answerBtnAttrName = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
+                                if (JSON.parse(xhr.response)["type"] == "trusted_answer") {
+                                    questionExist = true
                                 } else {
-                                    que_exist = false;
+                                    questionExist = false;
                                 }
-                                if (qd.answer_type == pkg.ansTypes[0] && qd.type == pkg.Types[0] && abs.length > 0) {
-                                    for (let i = 0; i < abs.length; i++) {
-                                        for (let j = 0; j < qd.render_info.selections.length; j++) {
-                                            if (abs[i] == order.indexOf(qd.render_info.selections[j]["position"])) {
-                                                abs[i] = order.indexOf(qd.render_info.selections[j]["position"]);
+                                if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0] && answerList.length > 0) {
+                                    /************ 選擇題 ************/
+                                    for (let i = 0; i < answerList.length; i++) {
+                                        for (let j = 0; j < questionData.render_info.selections.length; j++) {
+                                            // 還原選項位置
+                                            if (answerList[i] == order.indexOf(questionData.render_info.selections[j]["position"])) {
+                                                answerList[i] = order.indexOf(questionData.render_info.selections[j]["position"]);
                                             }
                                         }
                                     }
-                                    console.log(abs)
-                                    for (let i = 0; i < abs.length; i++) {
-                                        var t = $('[data-org-position]', true);
-                                        for (let u = 0; u < t.length; u++) {
-                                            if (t[u].getAttribute("data-org-position") == order[abs[i]]) {
-                                                $("[data-real-choice]", true)[u].click();
-                                                $("[data-real-choice]", true)[u].setAttribute(anwser_btn_attrname, "");
+                                    for (let i = 0; i < answerList.length; i++) {
+                                        var optionElements = $('[data-org-position]', true);
+                                        for (let j = 0; j < optionElements.length; j++) {
+                                            if (optionElements[j].getAttribute("data-org-position") == order[answerList[i]]) {
+                                                if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
+                                                    // 選取選項
+                                                    $("[data-real-choice]", true)[j].click();
+                                                }
+                                                // 高光選項
+                                                $("[data-real-choice]", true)[j].setAttribute(answerBtnAttrName, "");
                                             }
                                         }
                                     }
-                                    if (mode.auto_complete == true && mode.contests == false || mode.random == true && mode.contests == false) $("#answer-panel-submit-button").click();
-                                } else if (abs.length > 0) {
-                                    for (let i = 0; i < abs.length; i++) {
-                                        $("[data-real-choice]", true)[abs[i]].click();
-                                        $("[data-real-choice]", true)[abs[i]].setAttribute(anwser_btn_attrname, "");
+                                    clickSendButton();
+                                } else if (answerList.length > 0) {
+                                    /************ 是非題 ************/
+                                    for (let i = 0; i < answerList.length; i++) {
+                                        if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
+                                            // 選取選項
+                                            $("[data-real-choice]", true)[answerList[i]].click();
+                                        }
+                                        // 高光選項
+                                        $("[data-real-choice]", true)[answerList[i]].setAttribute(answerBtnAttrName, "");
                                     }
-                                    if (mode.auto_complete == true && mode.contests == false || mode.random == true && mode.contests == false) $("#answer-panel-submit-button").click();
+                                    clickSendButton();
                                 } else {
-                                    if (mode.random == true && mode.contests == false) {
-                                        if (qd.answer_type == pkg.ansTypes[0] && qd.type == pkg.Types[0]) {
-                                            generateRandomAnswers(qd.render_info.answers_count, $("[data-real-choice]", true).length).forEach(i => {
+                                    if (settings.answeringBehavior.random == true && mode.contests == false) {
+                                        /************ 隨機模式 ************/
+                                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
+                                            // 依照答案數量隨機生成答案 ( 選擇題 )
+                                            generateRandomAnswers(questionData.render_info.answers_count, $("[data-real-choice]", true).length).forEach(i => {
                                                 $("[data-real-choice]", true)[i].click();
                                             })
-                                        } else if (qd.answer_type == pkg.ansTypes[1] && qd.type == pkg.Types[1]) {
+                                        } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
+                                            // 隨機二選一 ( 是非題 )
                                             $("[data-real-choice]", true)[Math.floor(Math.random() * $("[data-real-choice]", true).length)].click();
                                         }
-                                        return $("#answer-panel-submit-button").click();
+                                        clickSendButton();
                                     } else {
+                                        // 不支援的類型或未找到
                                         return console.log("Not found.");
                                     }
                                 }
@@ -657,13 +1219,16 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                         })
                     };
 
-                    const sendAnswer = function (a) {
-                        if (!Array.isArray(a) || que_exist == true) return console.log();
-                        var qd = JSON.parse(question_temp_data.data).data.question_data.question;
+                    function sendAnswer(a) {
+                        if (!Array.isArray(a) || questionExist == true) {
+                            questionExist = false;
+                            return console.log();
+                        }
+                        const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
                         req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
-                            question_id: qd.render_info.q_info_id,
-                            question_content: qd.render_info.content.replace(/<\/?.+?>/g, ""),
-                            question_options: qd.render_info.selections,
+                            question_id: questionData.render_info.q_info_id,
+                            question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                            question_options: questionData.render_info.selections,
                             question_answers: a
                         }), xhr => {
                             if (xhr.readyState === 4 && xhr.status === 200) {
@@ -678,15 +1243,15 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                         if (($("#answer-panel") !== null || $("#answer-panel-question-with-input") !== null) && question_temp_data.data != undefined) {
                             // 顯示答案
                             answer = [];
-                            var qd = JSON.parse(question_temp_data.data).data.question_data.question;
-                            if (qd.answer_type == pkg.ansTypes[0] && qd.type == pkg.Types[0]) {
+                            const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
+                            if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
                                 if (document.querySelector('[data-correct="true"]') !== null) {
                                     var ga = document.querySelectorAll('[data-correct="true"]');
                                     for (let i = 0; i < ga.length; i++) {
                                         answer.push(order.indexOf(ga[i].getAttribute("data-org-position")));
                                     }
                                 }
-                            } else if (qd.answer_type == pkg.ansTypes[1] && qd.type == pkg.Types[1]) {
+                            } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
                                 if (document.querySelector(".pgo-style-question-detail-info-l7L8qm") !== null) {
                                     document.querySelector(".pgo-style-question-detail-info-l7L8qm").innerHTML == "O" ? answer = [0] : answer = [1]
                                 }
@@ -705,14 +1270,14 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                             question_temp_data = e.data;
                             getAnswer();
                         } else if (e.data.type === "answer" && mode.contests == true && question_temp_data.data !== "undefined" && JSON.parse(e.data.data).status == "ok") {
-                            var qd = JSON.parse(question_temp_data.data).data.question_data.question;
+                            const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
                             console.log(JSON.parse(e.data.give));
                             var t = [];
-                            if (qd.answer_type == pkg.ansTypes[0] && qd.type == pkg.Types[0]) {
+                            if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
                                 JSON.parse(e.data.give).ans.forEach(i => {
                                     t.push(order.indexOf(i));
                                 })
-                            } else if (qd.answer_type == pkg.ansTypes[1] && qd.type == pkg.Types[1]) {
+                            } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
                                 t.push(JSON.parse(e.data.give).ans == "O" ? 0 : 1);
                             }
                             JSON.parse(e.data.data).data.correct == 1 && sendAnswer(t);
@@ -720,20 +1285,9 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                             pkg.msg("PaGamO Answer Database Loaded.");
                         }
                     })
-
-                    var setting = document.createElement("div");
-                    setting.classList.add("ext-setting");
-                    setting.setAttribute("onclick", 'document.querySelector(".ext-modal").classList.remove("ext-modal-hide")')
-                    document.body.appendChild(setting);
-                    var modal = document.createElement("div");
-                    modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode">
-                    <label class="switch" ${mode.contests == true && 'style="cursor: not-allowed"'}><input type="checkbox" ${localStorage.getItem('pgo-ext-mode') == 'true' ? "checked" : ""} onchange="var g = false;if (this.checked == true) g=true;localStorage.setItem('pgo-ext-mode', g)" ${mode.contests == true && "disabled"}><span class="slider round"></span><span class="switch-description">Random Mode</span></label>
-                    <label class="switch"><input type="checkbox" ${localStorage.getItem('pgo-ext-show-progress') == 'true' ? "checked" : ""} onchange="var g = false;if (this.checked == true) g=true;localStorage.setItem('pgo-ext-show-progress', g)" ${mode.contests == true && "disabled"}><span class="slider round"></span><span class="switch-description">Show progress list ( Reload required )</span></label>
-                    </div><div class="close" onclick="this.parentNode.parentNode.classList.add('ext-modal-hide')"></div></div>`;
-                    modal.className = "ext-modal ext-modal-hide";
-                    document.body.appendChild(modal);
                     $('[ext-node-name="script"]').click();
                     installSuccessfully();
+
                 } else {
                     installFailed();
                     var modal = document.createElement("div");

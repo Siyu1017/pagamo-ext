@@ -1,5 +1,5 @@
-* {
-    user-select: auto !important;
+.portal-animation-fade-in * {
+    user-select: text !important;
 }
 
 .ext-setting {

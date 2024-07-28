@@ -1,5 +1,10 @@
 {
-    "version": "1.6.0",
-    "content": ["完善錯誤處理說明", "更新小提示，前往<a href='https://github.com/Siyu1017/pagamo-ext/blob/main/TIP.md' target='_blank'>此處</a>查看更多"],
+    "version": "2.0.0",
+    "content": [
+        "<h2>重大更新</h2>",
+        "UI 重新設計",
+        "更多的自定義功能",
+        "執行速度的提升"
+    ],
     "level": "required"
 }
