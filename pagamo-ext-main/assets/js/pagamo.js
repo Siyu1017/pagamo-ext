@@ -6,365 +6,306 @@
 
 "use strict";
 
-var Extension_Version = "2.0.1";
+(() => {
+    var Extension_Version = "2.1.0";
 
-function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
+    function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
-const delay = (delayInms) => {
-    return new Promise(resolve => setTimeout(resolve, delayInms));
-}
-
-const randomString = (__v__) => {
-    if (!__v__) return console.warn('Option Invalid');
-    var __s__l = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'p', 'Q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '2', '3', '4', '5', '6', '7', '8', '9'],
-        returndui = '';
-    for (let i = 0; i < __v__; i++) {
-        returndui += __s__l[Math.floor(Math.random() * __s__l.length)];
-    }
-    return returndui;
-}
-
-var __ext_v2_verify_token = {
-    main: randomString(24),
-    chunck: randomString(30),
-    check: randomString(8)
-}
-
-var script = document.createElement('div');
-script.setAttribute("ext-node-name", "script");
-script.setAttribute("onclick", `
-
-    var globalWindow = window;
-
-    // 監聽 XMLHttpRequest
-    const originalXhrOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url) {
-        this._url = url;
-        return originalXhrOpen.apply(this, arguments);
-    };
-
-    const originalXhrSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.send = function (d) {
-        const xhr = this;
-        const originalOnReadyStateChange = xhr.onreadystatechange;
-        xhr.onreadystatechange = function () {
-            if (this.readyState === 4) {
-                if (xhr._url == "/rooms/train.json" || xhr._url == "/rooms/attack.json") {
-                    window.postMessage({ type: "question", data: xhr.response, url: xhr._url }, window.location.origin);
-                } else if (xhr._url == "/rooms/submit.json") {
-                    window.postMessage({ type: "answer", data: xhr.response, url: xhr._url, give: decodeURI(d) }, window.location.origin);
-                }            
-            }
-            if (originalOnReadyStateChange) {
-                originalOnReadyStateChange.apply(this, arguments);
-            }
-        };
-        return originalXhrSend.apply(this, arguments);
-    };
-
-    // 監聽 fetch
-    const originalFetch = globalWindow.fetch;
-    globalWindow.fetch = function (url, options) {
-        return originalFetch.apply(this, arguments).then(response => {
-            console.log("fetch response received:", url, response);
-            return response;
-        });
-    };
-
-    // 監聽 WebSocket
-    const originalWebSocket = globalWindow.WebSocket;
-    globalWindow.WebSocket = function (url, protocols) {
-        console.log("WebSocket connection established:", url, protocols);
-        const socket = new originalWebSocket(url, protocols);
-        const originalSend = socket.send;
-        socket.send = function (data) {
-            console.log("WebSocket message sent:", data);
-            return originalSend.apply(this, arguments);
-        };
-        socket.addEventListener("message", function (event) {
-            console.log("WebSocket message received:", event.data);
-        });
-        return socket;
-    };
-    window.postMessage({ type: "check", data: null }, window.location.origin);
-`)
-document.body.appendChild(script);
-
-
-localStorage.getItem('pgo-ext-mode') || localStorage.setItem('pgo-ext-mode', false);
-localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-show-progress', false);
-
-; (async () => {
-    var req = async (m, u, t, h, d, f) => {
-        try {
-            var aj = new XMLHttpRequest();
-            aj.open(m, u, t);
-            Array.isArray(h) == true && h.forEach(e => {
-                aj.setRequestHeader(e[0], e[1]);
-            });
-            aj.send(d);
-            f && {}.toString.call(f) === '[object Function]' ?
-                aj.onloadend = () => { f(aj) }
-                : null;
-            return aj;
-        } catch (e) { return console.log("An error occurred while executing : ", e); };
-    };
-
-    var $ = (s, t) => { return t == true ? document.querySelectorAll(s) : document.querySelector(s); };
-
-    var pkg = {};
-
-    var mode = {
-        contests: location.pathname.split("/")[1] == "contests" ? true : false,
-        random: false,
-        auto_complete: false
-    };
-
-    /**
-     * ansTypes ? alphabet => get(answer_button_count) => get(answers_count) => getAnswer("alphabet", abc, ac); set("options", selections);
-     * ansTypes ? alphabet => get(answer_button_count) => get(answers_count) => getAnswer("alphabet", abc, ac); set("options", selections);
-     */
-    pkg.window = {};
-    pkg.msg = (_pjs_m_func_v_1$ad_sa, _pjs_t_func_v_1$ad_sa) => { return _pjs_t_func_v_1$ad_sa == "error" ? setTimeout(console.error.bind(console, _pjs_m_func_v_1$ad_sa)) : _pjs_t_func_v_1$ad_sa == "warn" ? setTimeout(console.warn.bind(console, _pjs_m_func_v_1$ad_sa)) : setTimeout(console.log.bind(console, _pjs_m_func_v_1$ad_sa)); };
-
-    window.setWindowObject = (g) => {
-        !g ? null : pkg.window = g;
+    function delay(delayInms) {
+        return new Promise(resolve => setTimeout(resolve, delayInms));
     }
 
-    window.addEventListener('ajaxReadyStateChange', function (e) {
-        console.log(e.detail); // XMLHttpRequest Object
-    });
-
-    // window.addEventListener("load", () => {
-    var answer = [];
-    var order = ["A", "B", "C", "D", "E", "F", "G", "H"];
-    var question = null;
-    var quetype = 0;
-    var option = [];
-    var questionExist = false;
-    var question_temp_data = {};
-
-    var loadingNotify = new Notify("loading", "Installing PaGamO plug-in extension...", {
-        close: true
-    });
-
-    function changeLoagingProgress() {
-        var percent = Math.random() * 5 + loadingNotify.currentProgress;
-        if (percent > 70) return;
-        loadingNotify.changeProgress(percent);
-    }
-
-    var showed_message = false;
-
-    function installFailed() {
-        if (showed_message == true) return;
-        showed_message = true;
-        clearInterval(changeLoagingProgress);
-        loadingNotify.hideProgressBar();
-        setTimeout(() => {
-            loadingNotify.close();
-            setTimeout(() => {
-                var message = new Notify("error", "Failed to Install.");
-                setTimeout(() => {
-                    message.close();
-                }, 10000);
-            }, 200);
-        }, 200);
-    }
-
-    function installSuccessfully() {
-        if (showed_message == true) return;
-        showed_message = true;
-        clearInterval(changeLoagingProgress);
-        loadingNotify.hideProgressBar();
-        setTimeout(() => {
-            loadingNotify.close();
-            setTimeout(() => {
-                var message = new Notify("done", "Installed successfully!");
-                setTimeout(() => {
-                    message.close();
-                }, 10000);
-            }, 200);
-        }, 200);
-    }
-
-    setInterval(changeLoagingProgress, 500);
-
-    /*
-    function checkServerAvailable(address) {
-        return new Promise(function (resolve, reject) {
-            fetch(address + "/api/availability", {
-                "body": null,
-                "method": "POST",
-                "mode": "no-cors",
-                "redirect": "follow"
-            }).then(res => {
-                if (res.status == 200) {
-                    resolve(true);
-                } else {
-                    resolve(false);
-                }
-            });
-        })
-    }
-
-    var serverIndex = 0;
-    */
-
-    function getPosition(element) {
-        function offset(el) {
-            var rect = el.getBoundingClientRect(),
-                scrollLeft = window.pageXOffset || document.documentElement.scrollLeft,
-                scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            return { top: rect.top + scrollTop, left: rect.left + scrollLeft }
+    function randomString(length) {
+        if (!length) return console.warn('Option Invalid');
+        var characters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'p', 'Q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '2', '3', '4', '5', '6', '7', '8', '9'],
+            str = '';
+        for (let i = 0; i < length; i++) {
+            str += characters[Math.floor(Math.random() * characters.length)];
         }
-        return { x: offset(element).left, y: offset(element).top };
+        return str;
     }
 
-    function HTMLEncode(str) {
-        var s = "";
-        if (str.length == 0) return "";
-        s = str.replaceAll(/&/g, "&amp;");
-        s = s.replaceAll(/</g, "&lt;");
-        s = s.replaceAll(/>/g, "&gt;");
-        s = s.replaceAll(/ /g, "&nbsp;");
-        s = s.replaceAll(/\'/g, "&#39;");
-        s = s.replaceAll(/\"/g, "&quot;");
-        return s;
+    function getStackTrace() {
+        var stack;
+
+        try {
+            throw new Error('');
+        } catch (error) {
+            stack = error.stack || '';
+        }
+
+        stack = stack.split('\n').map(function (line) { return line.trim(); });
+        return stack.splice(stack[0] == 'Error' ? 2 : 1);
     }
 
-    if ('show' == false) {
-        var list = initProgressList();
-        var list_pos = {
-            x: 0,
-            y: 0
-        }, moving = false;
-        list.list.addEventListener("mousedown", (e) => {
-            moving = true;
-            list_pos.x = e.clientX;
-            list_pos.y = e.clientY;
-        })
-        window.addEventListener("mousemove", (e) => {
-            if (moving == true) {
-                list.list.style.left = getPosition(list.list).x + e.clientX - list_pos.x + "px";
-                list.list.style.top = getPosition(list.list).y + e.clientY - list_pos.y + "px";
+    var __ext_v2_verify_token = {
+        main: randomString(24),
+        chunck: randomString(30),
+        check: randomString(8)
+    }
+
+    localStorage.getItem('pgo-ext-mode') || localStorage.setItem('pgo-ext-mode', false);
+    localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-show-progress', false);
+
+    ; (async () => {
+        var req = async (m, u, t, h, d, f) => {
+            try {
+                var aj = new XMLHttpRequest();
+                aj.open(m, u, t);
+                Array.isArray(h) == true && h.forEach(e => {
+                    aj.setRequestHeader(e[0], e[1]);
+                });
+                aj.send(d);
+                f && {}.toString.call(f) === '[object Function]' ?
+                    aj.onloadend = () => { f(aj) }
+                    : null;
+                return aj;
+            } catch (e) { return console.log("An error occurred while executing : ", e); };
+        };
+
+        var $ = (s, t) => { return t == true ? document.querySelectorAll(s) : document.querySelector(s); };
+
+        var mode = {
+            contests: location.pathname.split("/")[1] == "contests" ? true : false,
+            random: false,
+            auto_complete: false
+        };
+
+        /**
+         * ansTypes ? alphabet => get(answer_button_count) => get(answers_count) => getAnswer("alphabet", abc, ac); set("options", selections);
+         * ansTypes ? alphabet => get(answer_button_count) => get(answers_count) => getAnswer("alphabet", abc, ac); set("options", selections);
+         */
+
+        // window.addEventListener("load", () => {
+        var answer = [];
+        var order = ["A", "B", "C", "D", "E", "F", "G", "H"];
+        var question = null;
+        var quetype = 0;
+        var option = [];
+        var questionExist = false;
+        var question_temp_data = {};
+
+        var loadingNotify = new Notify("loading", "安裝中...", {
+            close: true
+        });
+
+        function changeLoagingProgress() {
+            var percent = Math.random() * 5 + loadingNotify.currentProgress;
+            if (percent > 70) return;
+            loadingNotify.changeProgress(percent);
+        }
+
+        var showed_message = false;
+
+        function installFailed() {
+            if (showed_message == true) return;
+            showed_message = true;
+            clearInterval(changeLoagingProgress);
+            loadingNotify.hideProgressBar();
+            setTimeout(() => {
+                loadingNotify.close();
+                setTimeout(() => {
+                    var message = new Notify("error", "安裝失敗");
+                    setTimeout(() => {
+                        message.close();
+                    }, 3000);
+                }, 200);
+            }, 200);
+        }
+
+        function installSuccessfully() {
+            if (showed_message == true) return;
+            showed_message = true;
+            clearInterval(changeLoagingProgress);
+            loadingNotify.hideProgressBar();
+            setTimeout(() => {
+                loadingNotify.close();
+                setTimeout(() => {
+                    var message = new Notify("done", "安裝成功!");
+                    setTimeout(() => {
+                        message.close();
+                    }, 3000);
+                }, 200);
+            }, 200);
+        }
+
+        setInterval(changeLoagingProgress, 500);
+
+        /*
+        function checkServerAvailable(address) {
+            return new Promise(function (resolve, reject) {
+                fetch(address + "/api/availability", {
+                    "body": null,
+                    "method": "POST",
+                    "mode": "no-cors",
+                    "redirect": "follow"
+                }).then(res => {
+                    if (res.status == 200) {
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                });
+            })
+        }
+    
+        var serverIndex = 0;
+        */
+
+        function getPosition(element) {
+            function offset(el) {
+                var rect = el.getBoundingClientRect(),
+                    scrollLeft = window.pageXOffset || document.documentElement.scrollLeft,
+                    scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                return { top: rect.top + scrollTop, left: rect.left + scrollLeft }
+            }
+            return { x: offset(element).left, y: offset(element).top };
+        }
+
+        function HTMLEncode(str) {
+            var s = "";
+            if (str.length == 0) return "";
+            s = str.replaceAll(/&/g, "&amp;");
+            s = s.replaceAll(/</g, "&lt;");
+            s = s.replaceAll(/>/g, "&gt;");
+            s = s.replaceAll(/ /g, "&nbsp;");
+            s = s.replaceAll(/\'/g, "&#39;");
+            s = s.replaceAll(/\"/g, "&quot;");
+            return s;
+        }
+
+        if ('show' == false) {
+            var list = initProgressList();
+            var list_pos = {
+                x: 0,
+                y: 0
+            }, moving = false;
+            list.list.addEventListener("mousedown", (e) => {
+                moving = true;
                 list_pos.x = e.clientX;
                 list_pos.y = e.clientY;
+            })
+            window.addEventListener("mousemove", (e) => {
+                if (moving == true) {
+                    list.list.style.left = getPosition(list.list).x + e.clientX - list_pos.x + "px";
+                    list.list.style.top = getPosition(list.list).y + e.clientY - list_pos.y + "px";
+                    list_pos.x = e.clientX;
+                    list_pos.y = e.clientY;
+                }
+            })
+            window.addEventListener("mouseup", (e) => {
+                moving = false;
+                list_pos = {
+                    x: 0,
+                    y: 0
+                }
+            })
+            window.onblur = () => {
+                moving = false;
+                list_pos = {
+                    x: 0,
+                    y: 0
+                }
             }
-        })
-        window.addEventListener("mouseup", (e) => {
-            moving = false;
-            list_pos = {
-                x: 0,
-                y: 0
-            }
-        })
-        window.onblur = () => {
-            moving = false;
-            list_pos = {
-                x: 0,
-                y: 0
-            }
-        }
-        var globalWindow = window;
+            var globalWindow = window;
 
-        function monitorRequests() {
-            const originalXhrOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function (method, url) {
-                this._url = url;
-                this._method = method;
-                var split = new URL(url).pathname.split('/');
-                this.item = list.addToStatusList(`${this._method.toUpperCase()} ${HTMLEncode(split[split.length - 1] + new URL(url).search)}`);
-                return originalXhrOpen.apply(this, arguments);
-            };
-            const originalXhrSend = XMLHttpRequest.prototype.send;
-            XMLHttpRequest.prototype.send = function () {
-                const xhr = this;
-                const originalOnReadyStateChange = xhr.onreadystatechange;
-                xhr.onreadystatechange = function () {
-                    if (this.readyState === 4) {
-                        if (this.status >= 200 && this.status < 300) {
-                            this.item.done();
-                        } else {
-                            this.item.error();
-                        }
-                    }
-                    if (originalOnReadyStateChange) {
-                        originalOnReadyStateChange.apply(this, arguments);
-                    }
+            function monitorRequests() {
+                const originalXhrOpen = XMLHttpRequest.prototype.open;
+                XMLHttpRequest.prototype.open = function (method, url) {
+                    this._url = url;
+                    this._method = method;
+                    var split = new URL(url).pathname.split('/');
+                    this.item = list.addToStatusList(`${this._method.toUpperCase()} ${HTMLEncode(split[split.length - 1] + new URL(url).search)}`);
+                    return originalXhrOpen.apply(this, arguments);
                 };
-                return originalXhrSend.apply(this, arguments);
-            };
-            const originalFetch = globalWindow.fetch;
-            globalWindow.fetch = function (url, options) {
-                var split = new URL(url).pathname.split('/');
-                var item = list.addToStatusList(`Fetch ${HTMLEncode(split[split.length - 1] + new URL(url).search)}`);
-                return originalFetch.apply(this, arguments).then(response => {
-                    if (response.ok == true) {
-                        item.done();
-                    } else {
+                const originalXhrSend = XMLHttpRequest.prototype.send;
+                XMLHttpRequest.prototype.send = function () {
+                    const xhr = this;
+                    const originalOnReadyStateChange = xhr.onreadystatechange;
+                    xhr.onreadystatechange = function () {
+                        if (this.readyState === 4) {
+                            if (this.status >= 200 && this.status < 300) {
+                                this.item.done();
+                            } else {
+                                this.item.error();
+                            }
+                        }
+                        if (originalOnReadyStateChange) {
+                            originalOnReadyStateChange.apply(this, arguments);
+                        }
+                    };
+                    return originalXhrSend.apply(this, arguments);
+                };
+                const originalFetch = globalWindow.fetch;
+                globalWindow.fetch = function (url, options) {
+                    var split = new URL(url).pathname.split('/');
+                    var item = list.addToStatusList(`Fetch ${HTMLEncode(split[split.length - 1] + new URL(url).search)}`);
+                    return originalFetch.apply(this, arguments).then(response => {
+                        if (response.ok == true) {
+                            item.done();
+                        } else {
+                            item.error();
+                        }
+                        return response;
+                    }).catch(err => {
                         item.error();
-                    }
-                    return response;
-                }).catch(err => {
-                    item.error();
-                });
+                    });
+                };
+            }
+            monitorRequests();
+        }
+
+        var availableServers = [];
+        var currentServer = null;
+
+        async function serversHandler(servers) {
+            var availability = await checkServerAvailable(servers[serverIndex]);
+            if (availability == true) {
+                availableServers.push(servers[serverIndex]);
+            }
+            serverIndex++;
+            if (serverIndex == servers.length) return () => {
+                serversHandlerCompleted();
             };
+            serversHandler(servers);
         }
-        monitorRequests();
-    }
 
-    var availableServers = [];
-    var currentServer = null;
-
-    async function serversHandler(servers) {
-        var availability = await checkServerAvailable(servers[serverIndex]);
-        if (availability == true) {
-            availableServers.push(servers[serverIndex]);
-        }
-        serverIndex++;
-        if (serverIndex == servers.length) return () => {
-            serversHandlerCompleted();
-        };
-        serversHandler(servers);
-    }
-
-    function checkNeedToUpdate(version) {
-        if (Number(Extension_Version.split('.')[0]) > Number(version.split('.')[0])) {
-            return false;
-        } else if (Number(Extension_Version.split('.')[0]) < Number(version.split('.')[0])) {
-            return true
-        } else {
-            if (Number(Extension_Version.split('.')[1]) > Number(version.split('.')[1])) {
+        function checkNeedToUpdate(version) {
+            if (Number(Extension_Version.split('.')[0]) > Number(version.split('.')[0])) {
                 return false;
-            } else if (Number(Extension_Version.split('.')[1]) < Number(version.split('.')[1])) {
-                return true;
+            } else if (Number(Extension_Version.split('.')[0]) < Number(version.split('.')[0])) {
+                return true
             } else {
-                if (Number(Extension_Version.split('.')[2]) >= Number(version.split('.')[2])) {
+                if (Number(Extension_Version.split('.')[1]) > Number(version.split('.')[1])) {
                     return false;
-                } else {
+                } else if (Number(Extension_Version.split('.')[1]) < Number(version.split('.')[1])) {
                     return true;
+                } else {
+                    if (Number(Extension_Version.split('.')[2]) >= Number(version.split('.')[2])) {
+                        return false;
+                    } else {
+                        return true;
+                    }
                 }
             }
         }
-    }
 
-    fetch("https://siyu1017.github.io/pagamo-ext/update.json").then(res => {
-        if (res.ok) {
-            return res.json();
-        }
-    }).then(extension => {
-        if (checkNeedToUpdate(extension.version) == true) {
-            var modal = document.createElement("div");
-            var levels = {
-                "required": "請立即",
-                "suggestion": "建議"
+        fetch("https://siyu1017.github.io/pagamo-ext/update.json").then(res => {
+            if (res.ok) {
+                return res.json();
             }
-            var updates = "";
-            extension.content.forEach(line => {
-                updates += `<li>${line}</li>`;
-            })
-            modal.innerHTML = `
+        }).then(extension => {
+            if (checkNeedToUpdate(extension.version) == true) {
+                var modal = document.createElement("div");
+                var levels = {
+                    "required": "請立即",
+                    "suggestion": "建議"
+                }
+                var updates = "";
+                extension.content.forEach(line => {
+                    updates += `<li>${line}</li>`;
+                })
+                modal.innerHTML = `
         <div class="ext-mode-modal">
             <div class="ext-mode ext-warn-mode">
                 <div class="ext-modal-text">
@@ -378,143 +319,153 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
             </div>
             <div class="close" onclick="this.parentNode.parentNode.remove();"></div>
         </div>`;
-            modal.className = "ext-modal";
-            document.body.appendChild(modal);
-            return false;
-        }
-    }).catch(err => {
-        var modal = document.createElement("div");
-        modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法檢測更新，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
-        modal.className = "ext-modal";
-        document.body.appendChild(modal);
-        installFailed();
-        throw new Error("Failed to install");
-    })
-
-    fetch("https://siyu1017.github.io/pagamo-ext/servers.json").then(res => {
-        return res.json();
-    }).then(servers => {
-        availableServers.push(servers[0]);
-        // serversHandler(servers);
-        serversHandlerCompleted();
-    }).catch(err => {
-        var modal = document.createElement("div");
-        modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法獲取伺服器列表，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
-        modal.className = "ext-modal";
-        document.body.appendChild(modal);
-        installFailed();
-        throw new Error("Failed to install");
-    })
-
-    function randomNumber(n, arr) {
-        var number = Math.floor(Math.random() * n);
-        if (arr.includes(number)) {
-            return randomNumber(n, arr);
-        } else {
-            return number;
-        }
-    }
-
-    function generateRandomAnswers(answer_count, button_count) {
-        var res = [];
-        for (let i = 0; i < answer_count; i++) {
-            var number = randomNumber(button_count, res);
-            res.push(number);
-        }
-        return res;
-    };
-
-    /*
-    function getWorldIDArray() {
-        try {
-            var id_array = [];
-            for (let i = 0; i < document.getElementById("course_select").querySelectorAll("option").length; i++) {
-                id_array.push({
-                    id: document.getElementById("course_select").querySelectorAll("option")[i].value,
-                    name: document.getElementById("course_select").querySelectorAll("option")[i].innerText
-                });
+                modal.className = "ext-modal";
+                document.body.appendChild(modal);
+                return false;
             }
-            return {
-                status: "ok",
-                array: id_array
-            };
-        } catch (e) {
-            return {
-                status: "error"
-            }
-        }
-    }
-    function parseCourseCodeFromURL(url) {
-        var type = "default";
-        var code = url.split(/course_code=/gi)[1];
-        if (url.search(/\/contests\//gi) > -1) {
-            type = "contests"
-            code = url.split(/\/contests\//gi)[1];
-        }
-        return { type, code };
-    }
-    async function getCourseCodesFromWorldID(arr) {
-        var course_array = [];
-        for (const item of arr) {
-            await fetch("https://www.pagamo.org/users/change_course_for_websocket", {
-                "headers": {
-                    "accept-language": "zh-TW,zh;q=0.9,en;q=0.8,zh-CN;q=0.7,en-US;q=0.6",
-                    "cache-control": "no-cache",
-                    "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "pragma": "no-cache",
-                    "sec-fetch-dest": "empty",
-                    "sec-fetch-mode": "cors",
-                    "sec-fetch-site": "same-origin",
-                    "x-csrf-token": form_select_course.querySelector('[name="authenticity_token"]').value,
-                    "x-requested-with": "XMLHttpRequest"
-                },
-                "referrerPolicy": "strict-origin-when-cross-origin",
-                "body": `course_id=${item.id}&version=2`,
-                "method": "POST",
-                "mode": "cors",
-                "credentials": "include"
-            }).then(res => {
-                return res.json();
-            }).then(res => {
-                var courseInfo = parseCourseCodeFromURL(res.url);
-                course_array.push({
-                    course_code: courseInfo.code,
-                    course_type: courseInfo.type,
-                    course_name: item.name
-                });
-            }).catch(err => {
-                installFailed();
-            }).finally(() => {
-                return;
-            })
-        };
-        return course_array;
-    }
-    */
-
-    function serversHandlerCompleted() {
-        if (availableServers.length == 0) {
+        }).catch(err => {
             var modal = document.createElement("div");
-            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無可用的伺服器，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法檢測更新，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
             modal.className = "ext-modal";
             document.body.appendChild(modal);
             installFailed();
-            return;
+            throw new Error("Failed to install");
+        })
+
+        fetch("https://siyu1017.github.io/pagamo-ext/servers.json").then(res => {
+            return res.json();
+        }).then(servers => {
+            availableServers.push(servers[0]);
+            // serversHandler(servers);
+            serversHandlerCompleted();
+        }).catch(err => {
+            var modal = document.createElement("div");
+            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無法獲取伺服器列表，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+            modal.className = "ext-modal";
+            document.body.appendChild(modal);
+            installFailed();
+            throw new Error("Failed to install");
+        })
+
+        function randomNumber(n, arr) {
+            var number = Math.floor(Math.random() * n);
+            if (arr.includes(number)) {
+                return randomNumber(n, arr);
+            } else {
+                return number;
+            }
         }
 
-        currentServer = availableServers[0];
+        function generateRandomAnswers(answer_count, button_count) {
+            var res = [];
+            for (let i = 0; i < answer_count; i++) {
+                var number = randomNumber(button_count, res);
+                res.push(number);
+            }
+            return res;
+        };
 
-        fetch(location.href, {
-            "referrer": "https://www.pagamo.org/",
-            "referrerPolicy": "strict-origin-when-cross-origin",
-            "body": null,
-            "method": "GET",
-            "mode": "cors",
-            "credentials": "include"
-        }).then(res => {
-            return res.text();
-        }).then(async content => {
-            var currentGc = content.match(/window\.currentGc.*?\(.*?\)/gi)[0].match(/\{.*\}/gi)[0];
+        /*
+        function getWorldIDArray() {
+            try {
+                var id_array = [];
+                for (let i = 0; i < document.getElementById("course_select").querySelectorAll("option").length; i++) {
+                    id_array.push({
+                        id: document.getElementById("course_select").querySelectorAll("option")[i].value,
+                        name: document.getElementById("course_select").querySelectorAll("option")[i].innerText
+                    });
+                }
+                return {
+                    status: "ok",
+                    array: id_array
+                };
+            } catch (e) {
+                return {
+                    status: "error"
+                }
+            }
+        }
+        function parseCourseCodeFromURL(url) {
+            var type = "default";
+            var code = url.split(/course_code=/gi)[1];
+            if (url.search(/\/contests\//gi) > -1) {
+                type = "contests"
+                code = url.split(/\/contests\//gi)[1];
+            }
+            return { type, code };
+        }
+        async function getCourseCodesFromWorldID(arr) {
+            var course_array = [];
+            for (const item of arr) {
+                await fetch("https://www.pagamo.org/users/change_course_for_websocket", {
+                    "headers": {
+                        "accept-language": "zh-TW,zh;q=0.9,en;q=0.8,zh-CN;q=0.7,en-US;q=0.6",
+                        "cache-control": "no-cache",
+                        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                        "pragma": "no-cache",
+                        "sec-fetch-dest": "empty",
+                        "sec-fetch-mode": "cors",
+                        "sec-fetch-site": "same-origin",
+                        "x-csrf-token": form_select_course.querySelector('[name="authenticity_token"]').value,
+                        "x-requested-with": "XMLHttpRequest"
+                    },
+                    "referrerPolicy": "strict-origin-when-cross-origin",
+                    "body": `course_id=${item.id}&version=2`,
+                    "method": "POST",
+                    "mode": "cors",
+                    "credentials": "include"
+                }).then(res => {
+                    return res.json();
+                }).then(res => {
+                    var courseInfo = parseCourseCodeFromURL(res.url);
+                    course_array.push({
+                        course_code: courseInfo.code,
+                        course_type: courseInfo.type,
+                        course_name: item.name
+                    });
+                }).catch(err => {
+                    installFailed();
+                }).finally(() => {
+                    return;
+                })
+            };
+            return course_array;
+        }
+        */
+
+        async function serversHandlerCompleted() {
+            if (availableServers.length == 0) {
+                var modal = document.createElement("div");
+                modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 無可用的伺服器，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+                modal.className = "ext-modal";
+                document.body.appendChild(modal);
+                installFailed();
+                return;
+            }
+
+            currentServer = availableServers[0];
+
+            console.log('window', window.currentGc);
+
+            var currentGc = 'currentGc' in window ? JSON.stringify(window.currentGc) : null;
+            if (currentGc == null) {
+                await fetch(location.href, {
+                    "referrer": "https://www.pagamo.org/",
+                    "referrerPolicy": "strict-origin-when-cross-origin",
+                    "body": null,
+                    "method": "GET",
+                    "mode": "cors",
+                    "credentials": "include"
+                }).then(res => {
+                    return res.text();
+                }).then(async content => {
+                    currentGc = content.match(/window\.currentGc.*?\(.*?\)/gi)[0].match(/\{.*\}/gi)[0];
+                }).catch(err => {
+                    console.log(err)
+                    installFailed();
+                })
+            }
+
             var need_to_update = true;
             var updateElement = document.createElement("div");
             var CourseCodes = [];
@@ -1143,12 +1094,19 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     }
 
                     function getAnswer() {
-                        const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
+                        var loadingMessage = new Notify("loading", "正在取得答案...");
+                        const questionData = JSON.parse(question_temp_data).data.question_data.question;
                         if (supportAnswerTypes.indexOf(questionData.answer_type) < 0 || supportQuestionTypes.indexOf(questionData.type) < 0) {
-                            return console.log(`不支援題目類型 ( ${questionData.type} ), 答案類型 ( ${questionData.answer_type} )`);
+                            console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', `不支援題目類型 ( ${questionData.type} ), 答案類型 ( ${questionData.answer_type} )`);
+                            loadingMessage.close();
+                            var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
+                            setTimeout(() => {
+                                resultMessage.close();
+                            }, 3000);
+                            return 
                         }
                         if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) { // 選擇題
-                            console.log(`答案總數 : ${questionData.render_info.answers_count}`);
+                            console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', `答案總數 : ${questionData.render_info.answers_count}`);
                         }
                         req("POST", currentServer + "/v2/g", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
                             qid: questionData.render_info.q_info_id,
@@ -1160,7 +1118,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                                 var answerList = JSON.parse(JSON.parse(xhr.response)["correct"]);
                                 var answerBtnAttrName = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
                                 if (JSON.parse(xhr.response)["type"] == "trusted_answer") {
-                                    questionExist = true
+                                    questionExist = true;
                                 } else {
                                     questionExist = false;
                                 }
@@ -1174,6 +1132,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                                             }
                                         }
                                     }
+                                    var selected = 0;
                                     for (let i = 0; i < answerList.length; i++) {
                                         var optionElements = $('[data-org-position]', true);
                                         for (let j = 0; j < optionElements.length; j++) {
@@ -1181,61 +1140,102 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                                                 if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
                                                     // 選取選項
                                                     $("[data-real-choice]", true)[j].click();
+                                                    selected++;
                                                 }
                                                 // 高光選項
                                                 $("[data-real-choice]", true)[j].setAttribute(answerBtnAttrName, "");
                                             }
                                         }
                                     }
-                                    clickSendButton();
+                                    loadingMessage.close();
+                                    var resultMessage = new Notify("done", "成功取得答案");
+                                    setTimeout(() => {
+                                        resultMessage.close();
+                                    }, 3000);
+                                    if (selected > 0) {
+                                        clickSendButton();
+                                    }
                                 } else if (answerList.length > 0) {
                                     /************ 是非題 ************/
+                                    var selected = 0;
                                     for (let i = 0; i < answerList.length; i++) {
                                         if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
                                             // 選取選項
                                             $("[data-real-choice]", true)[answerList[i]].click();
+                                            selected++;
                                         }
                                         // 高光選項
                                         $("[data-real-choice]", true)[answerList[i]].setAttribute(answerBtnAttrName, "");
                                     }
-                                    clickSendButton();
+                                    loadingMessage.close();
+                                    var resultMessage = new Notify("done", "成功取得答案");
+                                    setTimeout(() => {
+                                        resultMessage.close();
+                                    }, 3000);
+                                    if (selected > 0) {
+                                        clickSendButton();
+                                    }
                                 } else {
+                                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "該題目為不支援的類型或未找到");
+                                    loadingMessage.close();
+                                    var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
+                                    setTimeout(() => {
+                                        resultMessage.close();
+                                    }, 3000);
                                     if (settings.answeringBehavior.random == true && mode.contests == false) {
                                         /************ 隨機模式 ************/
+                                        var selected = 0;
                                         if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
                                             // 依照答案數量隨機生成答案 ( 選擇題 )
                                             generateRandomAnswers(questionData.render_info.answers_count, $("[data-real-choice]", true).length).forEach(i => {
                                                 $("[data-real-choice]", true)[i].click();
+                                                selected++;
                                             })
                                         } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
                                             // 隨機二選一 ( 是非題 )
                                             $("[data-real-choice]", true)[Math.floor(Math.random() * $("[data-real-choice]", true).length)].click();
+                                            selected++;
                                         }
-                                        clickSendButton();
+                                        if (selected > 0) {
+                                            clickSendButton();
+                                        }
                                     } else {
                                         // 不支援的類型或未找到
-                                        return console.log("Not found.");
+                                        return;
                                     }
                                 }
+                            } else if (xhr.readyState === 4) {
+                                loadingMessage.close();
+                                var resultMessage = new Notify("error", "獲取失敗");
+                                setTimeout(() => {
+                                    resultMessage.close();
+                                }, 3000);
                             }
                         })
                     };
 
-                    function sendAnswer(a) {
-                        if (!Array.isArray(a) || questionExist == true) {
+                    function sendAnswer(answer) {
+                        if (!Array.isArray(answer) || questionExist == true) {
                             questionExist = false;
                             return console.log();
                         }
-                        const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
+                        const questionData = JSON.parse(question_temp_data).data.question_data.question;
                         req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
                             question_id: questionData.render_info.q_info_id,
                             question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
                             question_options: questionData.render_info.selections,
-                            question_answers: a
+                            question_answers: answer
                         }), xhr => {
                             if (xhr.readyState === 4 && xhr.status === 200) {
                                 if (xhr.response == "Success") {
-                                    return console.log("Success");
+                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "成功新增題目資料，內容:\n", {
+                                        question_id: questionData.render_info.q_info_id,
+                                        question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                                        question_options: questionData.render_info.selections,
+                                        question_answers: answer
+                                    });
+                                } else {
+                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "無法新增題目資料");
                                 }
                             }
                         })
@@ -1266,30 +1266,123 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                         childList: true
                     });
 
-                    window.addEventListener("message", (e) => {
-                        console.log(e)
-                        if (e.data.type === "question" && JSON.parse(e.data.data).status == "ok") {
-                            question_temp_data = e.data;
-                            getAnswer();
-                        } else if (e.data.type === "answer" && mode.contests == true && question_temp_data.data !== "undefined" && JSON.parse(e.data.data).status == "ok") {
-                            const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
-                            console.log(JSON.parse(e.data.give));
-                            var t = [];
-                            if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
-                                JSON.parse(e.data.give).ans.forEach(i => {
-                                    t.push(order.indexOf(i));
-                                })
-                            } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
-                                t.push(JSON.parse(e.data.give).ans == "O" ? 0 : 1);
-                            }
-                            JSON.parse(e.data.data).data.correct == 1 && sendAnswer(t);
-                        } else if (e.data.type == "check") {
-                            pkg.msg("PaGamO Answer Database Loaded.");
-                        }
-                    })
-                    $('[ext-node-name="script"]').click();
-                    installSuccessfully();
+                    var injected = false;
+                    var checkInjectedXhrURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
 
+                    const originalXhrOpen = window.XMLHttpRequest.prototype.open;
+                    window.XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+                        this._url = url;
+                        return originalXhrOpen.apply(this, arguments);
+                    };
+
+                    var xhr = window.XMLHttpRequest.prototype;
+                    var originalOpen = xhr.open;
+
+                    Reflect.set(xhr, 'open', function overrideOpen(method, url) {
+                        this._url = url;
+                        return originalOpen.apply(this, arguments);
+                    });
+
+                    (function () {
+                        var xhr = window.XMLHttpRequest.prototype;
+                        var originalOpen = xhr.open;
+
+                        Object.defineProperty(xhr, 'open', {
+                            value: function overrideOpen(method, url) {
+                                // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Overriding open method!');
+                                // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Original XHR URL:', url, '\nTrace:', getStackTrace());
+                                this._url = url;
+                                return originalOpen.apply(this, arguments);
+                            },
+                            configurable: false,
+                            writable: false
+                        });
+                    })();
+
+                    const originalXhrSend = window.XMLHttpRequest.prototype.send;
+                    window.XMLHttpRequest.prototype.send = function (payload) {
+                        const xhr = this;
+                        const originalOnReadyStateChange = xhr.onreadystatechange;
+                        xhr.onreadystatechange = function () {
+                            // console.log(`XHR readyState: ${xhr.readyState}, status: ${xhr.status}, url: ${xhr._url}`, '\nTrace:', getStackTrace());
+                            try {
+                                if (xhr._url == checkInjectedXhrURL) {
+                                    injected = true;
+                                }
+                                if (this.readyState === 4 && this.status == 200) {
+                                    // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Details:', { data: xhr.response, url: xhr._url })
+                                    if (xhr._url == "/rooms/train.json" || xhr._url == "/rooms/attack.json") {
+                                        question_temp_data = xhr.response;
+                                        getAnswer();
+                                    } else if (xhr._url == "/rooms/submit.json") {
+                                        const questionData = JSON.parse(question_temp_data).data.question_data.question;
+                                        console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', '送出答案，酬載:', JSON.parse(payload));
+                                        var currectAnswers = [];
+                                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
+                                            JSON.parse(payload).ans.forEach(i => {
+                                                currectAnswers.push(order.indexOf(i));
+                                            })
+                                        } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
+                                            currectAnswers = [JSON.parse(payload).ans == "O" ? 0 : 1];
+                                        }
+                                        JSON.parse(xhr.response).data.correct == 1 && sendAnswer(currectAnswers);
+                                    } else if (xhr._url == "/rooms/get_detailed_answer") {
+                                        const questionData = JSON.parse(xhr.response).data.question;
+                                        var currectAnswers = [];
+                                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
+                                            if (questionData.ans_slot_count == 1) {
+                                                currectAnswers = [order.indexOf(questionData.answer)];
+                                            } else {
+                                                questionData.answer.forEach(answer => {
+                                                    currectAnswers.push(order.indexOf(answer));
+                                                })
+                                            }
+                                        } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
+                                            currectAnswers = [questionData.answer == "O" ? 0 : 1];
+                                        }
+                                        req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
+                                            question_id: questionData.render_info.q_info_id,
+                                            question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                                            question_options: questionData.render_info.selections,
+                                            question_answers: currectAnswers
+                                        }), xhr => {
+                                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                                if (xhr.response == "Success") {
+                                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "成功新增題目資料，內容:\n", {
+                                                        question_id: questionData.render_info.q_info_id,
+                                                        question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                                                        question_options: questionData.render_info.selections,
+                                                        question_answers: currectAnswers
+                                                    });
+                                                } else {
+                                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "無法新增題目資料");
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                                originalOnReadyStateChange.apply(this, arguments);
+                            } catch (e) { };
+                        };
+                        return originalXhrSend.apply(this, arguments);
+                    };
+
+                    Object.freeze(xhr);
+
+                    var checkInjectedXhr = new XMLHttpRequest();
+                    checkInjectedXhr.open('GET', checkInjectedXhrURL);
+                    checkInjectedXhr.send(null);
+                    checkInjectedXhr.onloadend = () => {
+                        if (injected == true) {
+                            installSuccessfully();
+                        } else {
+                            installFailed();
+                            var modal = document.createElement("div");
+                            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 載入失敗，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+                            modal.className = "ext-modal";
+                            document.body.appendChild(modal);
+                        }
+                    }
                 } else {
                     installFailed();
                     var modal = document.createElement("div");
@@ -1298,10 +1391,7 @@ localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-s
                     document.body.appendChild(modal);
                 }
             })
-        }).catch(err => {
-            console.log(err)
-            installFailed();
-        })
-    }
-    //})
-})()
+        }
+        //})
+    })();
+})();

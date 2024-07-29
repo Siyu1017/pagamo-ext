@@ -45,7 +45,7 @@ class Notify {
             <div class="notify-text">${message}</div>
         </div>
         ${config.close == true ? '<div class="notify-close"></div>' : ''}${config.loadingBar == true ? '<div class="notify-loading-bar"></div>' : ''}`;
-        document.querySelector(".notify-container").appendChild(notify);
+        // document.querySelector(".notify-container").appendChild(notify);
         this.notify = notify;
         var _this = this;
         if (config.close == true) {
@@ -59,13 +59,21 @@ class Notify {
                 notify.querySelector('.notify-loading-bar').style.width = `${percent}%`;
             }
 
-            this.hideProgressBar = function() {
+            this.hideProgressBar = function () {
                 notify.querySelector('.notify-loading-bar').style.width = `100%`;
                 setTimeout(() => {
                     notify.querySelector('.notify-loading-bar').style.height = '0px';
                 }, 100)
             }
         }
+        this.extensionProgressContainer = document.createElement("div");
+        this.extensionProgressBox = document.createElement("div");
+        this.extensionProgressContainer.style = "width: 100vw;position: fixed;top: 48px;display: flex;justify-content: center;z-index: 2147483647;pointer-events: none;user-select: none;-webkit-user-drag: none;transition: all .1s ease-in-out;opacity:0;"
+        this.extensionProgressBox.style = "width: fit-content;padding: 8px 12px;background: #fff;color: #000;border-radius: 6px;font-size: 16px;box-shadow: 0 0 16px 4px rgba(0, 0, 0, .15);";
+        this.extensionProgressBox.innerHTML = message;
+        this.extensionProgressContainer.appendChild(this.extensionProgressBox);
+        document.body.appendChild(this.extensionProgressContainer);
+        this.extensionProgressContainer.style.opacity = '1';
     }
     currentProgress = 0
     changeIcon(icon) {
@@ -76,8 +84,10 @@ class Notify {
     }
     close() {
         this.notify.classList.add("hide");
+        this.extensionProgressContainer.style.opacity = '0';
         setTimeout(() => {
             this.notify.remove();
+            this.extensionProgressContainer.remove();
         }, 200)
     }
 }
