@@ -1,0 +1,473 @@
+.extension-setting-container {
+    --border-color: rgb(220, 220, 220);
+    --panel-bg: rgba(244, 244, 244, .95);
+    --secondary-color: rgb(155, 155, 155);
+    --btn-bg: rgb(228, 228, 228);
+    --btn-selected-color: rgb(84, 84, 84);
+    --item-font-color: rgb(114, 114, 114);
+    --item-hover-bg: rgba(126, 126, 126, .1);
+    --item-hover-color: #000;
+    --switch-bg: #ccc;
+    --switch-slider-bg: #fff;
+    --switch-slider-checked-bg: #2196F3;
+    --primary-color: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+    .extension-setting-container {
+        --border-color: rgb(74 74 74);
+        --panel-bg: rgb(14 14 14 / 93%);
+        --secondary-color: rgb(185 185 185);
+        --btn-bg: rgb(61 61 61);
+        --btn-selected-color: rgb(255 255 255);
+        --item-font-color: rgb(180 180 180);
+        --item-hover-bg: rgba(126, 126, 126, .1);
+        --item-hover-color: #fff;
+        --switch-bg: #555;
+        --switch-slider-bg: #fff;
+        --switch-slider-checked-bg: #2196F3;
+        --primary-color: #fff;
+    }
+}
+
+.extension-setting-container.light {
+    --border-color: rgb(220, 220, 220);
+    --panel-bg: rgba(244, 244, 244, .95);
+    --secondary-color: rgb(155, 155, 155);
+    --btn-bg: rgb(220 220 220);
+    --btn-selected-color: rgb(84, 84, 84);
+    --item-font-color: rgb(114, 114, 114);
+    --item-hover-bg: rgba(126, 126, 126, .1);
+    --item-hover-color: #000;
+    --switch-bg: #ccc;
+    --switch-slider-bg: #fff;
+    --switch-slider-checked-bg: #2196F3;
+    --primary-color: #000;
+}
+
+.extension-setting-container.dark {
+    --border-color: rgb(74 74 74);
+    --panel-bg: rgb(14 14 14 / 93%);
+    --secondary-color: rgb(185 185 185);
+    --btn-bg: rgb(61 61 61);
+    --btn-selected-color: rgb(255 255 255);
+    --item-font-color: rgb(180 180 180);
+    --item-hover-bg: rgba(126, 126, 126, .1);
+    --item-hover-color: #fff;
+    --switch-bg: #555;
+    --switch-slider-bg: #fff;
+    --switch-slider-checked-bg: #2196F3;
+    --primary-color: #fff;
+}
+
+.extension-setting-container,
+.extension-setting-container * {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    box-sizing: border-box;
+}
+
+.extension-setting-container {
+    display: flex;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    transition: all .1s ease-in-out;
+    align-items: center;
+    transform-origin: top center;
+}
+
+.extension-setting-container:not(.active) {
+    z-index: -1;
+    pointer-events: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-drag: none;
+    opacity: 0;
+}
+
+.extension-setting-container.active {
+    z-index: 9999999;
+    opacity: 1;
+    backdrop-filter: blur(4px) brightness(0.6);
+}
+
+.extension-setting-container:not(.active) .extension-setting-panel {
+    animation: hide-setting-panel 100ms ease-in-out 1 forwards;
+}
+
+.extension-setting-container.active .extension-setting-panel {
+    animation: show-setting-panel 100ms ease-in-out 1 forwards;
+}
+
+.extension-setting-panel {
+    background: var(--panel-bg);
+    border-radius: 12px;
+    max-width: min(80%, 640px);
+    max-height: min(60%, 420px);
+    width: -webkit-fill-available;
+    height: -webkit-fill-available;
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 16px 4px rgba(0, 0, 0, .15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.extension-setting-navigator {
+    width: -webkit-fill-available;
+    display: flex;
+    padding: 12px 16px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    color: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.extension-setting-search-box {
+    height: 28px !important;
+    border: 0 !important;
+    flex: 1 !important;
+    font-size: 16px !important;
+    outline: 0 !important;
+    background: none !important;
+    color: var(--secondary-color) !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+.extension-setting-search-box:focus {
+    box-shadow: none !important;
+}
+
+.extension-setting-search-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.extension-setting-close {
+    font-size: 14px;
+    padding: 4px 6px;
+    background: var(--btn-bg);
+    color: var(--secondary-color);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-drag: none;
+}
+
+.extension-setting-list {
+    height: -webkit-fill-available;
+    width: -webkit-fill-available;
+    overflow: auto;
+}
+
+.extension-setting-category {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.extension-setting-category-title {
+    font-weight: 600;
+    font-size: 18px;
+    padding: 4px 12px 10px;
+    color: var(--primary-color);
+}
+
+.extension-setting-category+.extension-setting-category {
+    border-top: 1px solid var(--border-color);
+}
+
+.extension-setting-item {
+    display: flex;
+    padding: 10px 12px;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    color: var(--item-font-color);
+    height: 42px;
+}
+
+.extension-setting-item.link, 
+.extension-setting-item.button {
+    cursor: pointer;
+}
+
+.extension-setting-item-icon,
+.extension-setting-item-icon svg {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+}
+
+.extension-setting-item.button:hover {
+    background: var(--item-hover-bg);
+}
+
+.extension-setting-item:hover {
+    color: var(--item-hover-color);
+}
+
+.extension-setting-item-title {
+    font-size: 16px;
+}
+
+.extension-setting-item-content {
+    margin-left: auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    height: -webkit-fill-available;
+    overflow: visible;
+    align-items: center;
+    gap: 8px;
+}
+
+.extension-setting-btn-group {
+    display: flex;
+    flex-direction: row;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    height: -webkit-fill-available;
+    transition: all .1s ease-in-out;
+    overflow: hidden;
+}
+
+.extension-setting-btn {
+    font-size: 14px;
+    padding: 4px 8px;
+    background: var(--btn-bg);
+    color: var(--secondary-color);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-drag: none;
+    transition: all .1s ease-in-out;
+}
+
+.extension-setting-btn-group .extension-setting-btn {
+    background: none;
+    border: 0;
+    height: -webkit-fill-available;
+    border-radius: 0;
+}
+
+.extension-setting-btn-group .extension-setting-btn+.extension-setting-btn {
+    border-left: 1px solid var(--border-color);
+}
+
+.extension-setting-btn-group .extension-setting-btn.selected {
+    background: var(--btn-bg);
+    color: var(--btn-selected-color);
+}
+
+@keyframes show-setting-panel {
+    0% {
+        transform: scale(.95);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes hide-setting-panel {
+    0% {
+        transform: scale(1);
+    }
+
+    100% {
+        transform: scale(.95);
+    }
+}
+
+.extension-setting-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    margin: 0 !important;
+}
+
+.extension-setting-switch.disabled * {
+    cursor: not-allowed !important;
+    opacity: .5;
+}
+
+/* Hide default HTML checkbox */
+.extension-setting-switch input.extension-setting-switch-checkbox {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* The slider */
+.extension-setting-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--switch-bg);
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.extension-setting-switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--switch-slider-bg);
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input.extension-setting-switch-checkbox:checked+.extension-setting-switch-slider {
+    background-color: var(--switch-slider-checked-bg);
+}
+
+input.extension-setting-switch-checkbox:focus+.extension-setting-switch-slider {
+    box-shadow: 0 0 1px var(--switch-slider-checked-bg);
+}
+
+input.extension-setting-switch-checkbox:checked+.extension-setting-switch-slider:before {
+    -webkit-transform: translateX(24px);
+    -ms-transform: translateX(24px);
+    transform: translateX(24px);
+}
+
+/* Rounded sliders */
+.extension-setting-switch-slider.round {
+    border-radius: 99px;
+}
+
+.extension-setting-switch-slider.round:before {
+    border-radius: 50%;
+}
+
+.extension-setting-switch-label {
+    -webkit-transform: translateX(60px);
+    -ms-transform: translateX(60px);
+    transform: translateX(60px);
+    font-size: 100%;
+    white-space: nowrap;
+    position: absolute;
+}
+
+
+.extension-setting-container *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+    background: none;
+}
+
+.extension-setting-container *::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 4px 4px transparent;
+    border: solid 4px transparent;
+}
+
+.extension-setting-container *::-webkit-scrollbar-thumb {
+    box-shadow: inset 0 0 4px 4px rgba(191, 191, 191, .5);
+    border: solid 4px transparent;
+    border-radius: 6px;
+}
+
+.extension-setting-container *::-webkit-scrollbar-thumb:hover {
+    min-width: 50px;
+    min-height: 50px;
+    box-shadow: inset 0 0 4px 4px rgba(191, 191, 191, .9);
+    border: solid 4px transparent;
+    border-radius: 6px;
+}
+
+.extension-setting-container *::-webkit-scrollbar-button {
+    display: none;
+}
+
+.extension-setting-container *::-webkit-scrollbar-corner {
+    background: none;
+}
+
+.extension-setting-search-not-found {
+    display: none;
+}
+
+.extension-setting-search-not-found.active {
+    display: inline-flex;
+    color: var(--secondary-color);
+    justify-content: center;
+    font-size: 16px;
+    align-items: center;
+    text-align: center;
+    width: -webkit-fill-available;
+    padding: 24px;
+}
+
+.extension-setting-item-beta {
+    font-size: 12px;
+    scale: .8;
+    transform-origin: center;
+    display: inline-block;
+    background: linear-gradient(to right, hsl(269 calc(0.8* 52.7%) 52.7% / 1), hsl(325 calc(0.8* 31.7%) 51.8% / 1));
+    color: #fff;
+    border-radius: 1000px;
+    padding: 2px 6px;
+    margin-left: 4px;
+}
+
+.extension-setting {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 99999999;
+    background: rgba(72, 72, 72, .7);
+    color: #fff;
+    cursor: pointer;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+}
+
+.extension-setting-input {
+    background: var(--btn-bg) !important;
+    color: var(--primary-color) !important;
+    margin: 0 !important;
+    padding: 4px 6px !important;
+    height: -webkit-fill-available !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+}
+
+.extension-setting-input:disabled {
+    opacity: .7 !important;
+}

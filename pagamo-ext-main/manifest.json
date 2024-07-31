@@ -2,19 +2,20 @@
     "manifest_version": 3,
     "name": "PaGamO Plug-in",
     "description": "一款用於提升 PaGamO 使用體驗的外掛程式，它可以幫助你提高答題效率，並提供自定義客戶端功能",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "icons": {
         "16": "./logo/logo-16.png",
         "32": "./logo/logo-32.png",
         "192": "./logo/logo-192.png",
         "512": "./logo/logo-512.png"
     },
-    "options_page": "settings/index.html",
     "action": {
         "default_icon": {
-            "32": "./logo/logo-32.png"
-        },
-        "default_popup": "popup/index.html"
+            "16": "./logo/logo-16.png",
+            "32": "./logo/logo-32.png",
+            "192": "./logo/logo-192.png",
+            "512": "./logo/logo-512.png"
+        }
     },
     "permissions": [
         "activeTab",
@@ -44,17 +45,13 @@
         {
             "run_at": "document_end",
             "js": [
-                "./assets/js/notify.js",
-                "./assets/js/owo.js",
-                "./assets/js/progress.js",
-                "./assets/js/pagamo.js",
-                "./assets/js/setting.js"
+                "./scripts/notify.js",
+                "./scripts/setting.js",
+                "./scripts/main.js"
             ],
             "css": [
-                "./assets/css/setting.css",
-                "./assets/css/notify.css",
-                "./assets/css/progress.css",
-                "./assets/css/pagamo.css"
+                "./styles/setting.css",
+                "./styles/pagamo.css"
             ],
             "matches": [
                 "*://*.pagamo.org/*"
