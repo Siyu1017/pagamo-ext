@@ -7,9 +7,11 @@
 "use strict";
 
 (() => {
-    var Extension_Version = "2.3.1";
+    var Extension_Version = "2.3.2";
 
     var networkPanel = new NetworkPanel(document.documentElement);
+
+    networkPanel.container.style = "display: none;"
 
     var disabledURLs = ["clarity.ms", "google-analytics.com"];
     var requests = [];
