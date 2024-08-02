@@ -1,5 +1,5 @@
 /**
- * PaGamO Answer Database
+ * PaGamO Plug-in
  * Copyright 2023 - 2024 (c) Siyu1017
  * All rights reserved.
  */
@@ -7,7 +7,28 @@
 "use strict";
 
 (() => {
-    var Extension_Version = "2.2.0";
+    var Extension_Version = "2.3.0";
+
+    var networkPanel = new NetworkPanel(document.documentElement);
+
+    var disabledURLs = ["clarity.ms", "google-analytics.com"];
+    var requests = [];
+
+    window.requests = requests;
+
+    if ('sendBeacon' in navigator) {
+        const originalSendBeacon = navigator.sendBeacon;
+
+        navigator.sendBeacon = function (url, data) {
+            disabledURLs.forEach(disabledURL => {
+                if (url.includes(disabledURL)) {
+                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'BLOCKED [ COLLECT ] - BEACON');
+                    data = new Uint8Array();
+                }
+            })
+            return originalSendBeacon.call(navigator, url, data);
+        };
+    }
 
     function setcookie(name, value, daysTolive) { let cookie = name + "=" + encodeURIComponent(value); if (typeof daysTolive === "number") cookie += "; max-age =" + (daysTolive * 60 * 60 * 24); document.cookie = cookie; }; function getCookie(cname) { let name = cname + "="; let decodedCookie = decodeURIComponent(document.cookie); let ca = decodedCookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) == ' ') { c = c.substring(1); } if (c.indexOf(name) == 0) { return c.substring(name.length, c.length); } } return ""; };
 
@@ -37,23 +58,24 @@
         stack = stack.split('\n').map(function (line) { return line.trim(); });
         return stack.splice(stack[0] == 'Error' ? 2 : 1);
     }
-    
+
     localStorage.getItem('pgo-ext-mode') || localStorage.setItem('pgo-ext-mode', false);
     localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-show-progress', false);
 
     ; (async () => {
-        var req = async (m, u, t, h, d, f) => {
+        var req = async (method, url, async, headers, payloads, callback) => {
             try {
-                var aj = new XMLHttpRequest();
-                aj.open(m, u, t);
-                Array.isArray(h) == true && h.forEach(e => {
-                    aj.setRequestHeader(e[0], e[1]);
+                var xhr = new XMLHttpRequest();
+                xhr.open(method, url, async);
+                Array.isArray(headers) == true && headers.forEach(header => {
+                    xhr.setRequestHeader(header[0], header[1]);
                 });
-                aj.send(d);
-                f && {}.toString.call(f) === '[object Function]' ?
-                    aj.onloadend = () => { f(aj) }
+                xhr.withCredentials = false;
+                xhr.send(payloads);
+                callback && {}.toString.call(callback) === '[object Function]' ?
+                    xhr.onloadend = () => { callback(xhr) }
                     : null;
-                return aj;
+                return xhr;
             } catch (e) { return console.log("An error occurred while executing : ", e); };
         };
 
@@ -463,52 +485,14 @@
             var need_to_update = true;
             var updateElement = document.createElement("div");
             var CourseCodes = [];
-            await fetch(currentServer + `/v2/expired/${JSON.parse(currentGc).unique_user_id}`, {
-                "body": null,
-                "method": "POST",
-                "mode": "cors"
-            }).then(res => {
-                return res.json();
-            }).then(res => {
-                if (res.status == "ok" && res.expired == false) {
-                    need_to_update = false;
-                }
-            }).catch(err => {
-                installFailed();
-            }).finally(() => {
-                return;
-            })
-            if (need_to_update == true) {
-                updateElement.style = "position: fixed;top: 0px;left: 0px;width: 100vw;height: 100vh;background: rgba(0, 0, 0, 0.7);z-index: 0;opacity: 0;display: flex;align-items: center;justify-content: center;transition: all 0.2s;";
-                updateElement.innerHTML = `<div class="pgo-ext-update-element" style="opacity: 0;scale: 2;background: rgb(255, 255, 255);padding: 2rem 4rem 2rem 3rem;border-radius: 6px;font-size: 18px;display: flex;align-items: center;gap: 2rem;transition: all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" class="notify-loading notify-loading-spinner"></svg>更新使用者資訊中...</div>`;
-                document.body.appendChild(updateElement);
-                setTimeout(() => {
-                    updateElement.querySelector('.pgo-ext-update-element').style.opacity = "1";
-                    updateElement.style.zIndex = '999999999999999999999999';
-                    updateElement.style.opacity = '1';
-                    updateElement.querySelector('.pgo-ext-update-element').style.scale = "1";
-                }, 200)
+
+            if (!currentGc) {
+                return installFailed();
             }
-            await fetch("https://www.pagamo.org/api/courses_lobby/courses", {
-                "headers": {
-                    "content-type": "application/json"
-                },
-                "referrer": "https://www.pagamo.org/",
-                "referrerPolicy": "strict-origin-when-cross-origin",
-                "body": "{\"public\":false,\"category\":\"global\"}",
-                "method": "POST",
-                "mode": "cors",
-                "credentials": "include"
-            }).then(res => {
-                return res.json();
-            }).then(res => {
-                CourseCodes = res.data.own_courses;
-            }).catch(err => {
-                CourseCodes = 'error';
-            }).finally(() => {
-                console.log(CourseCodes);
-                return;
-            });
+
+            if (!JSON.parse(currentGc).unique_user_id) {
+                return installFailed();
+            }
 
             var mergeDeep = (target, ...sources) => {
                 if (!sources.length) return target;
@@ -635,10 +619,11 @@
                     })
                 }
             }
-            const ob = new MutationObserver(() => {
+
+            const observerForClient = new MutationObserver(() => {
                 clientChange(false);
             });
-            ob.observe(document.body, {
+            observerForClient.observe(document.body, {
                 childList: true,
                 subtree: true
             });
@@ -951,7 +936,7 @@
                 }]
             }, {
                 category: 'developer-tools',
-                categoryTitle: '開發人員工具 ( 未完成 )',
+                categoryTitle: '開發人員工具',
                 items: [{
                     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
                     title: '頁面編輯器',
@@ -968,7 +953,18 @@
                     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
                     title: '紀錄網路活動',
                     link: 0,
-                    content: [settingComponent.useSwitch({ checked: false })]
+                    beta: true,
+                    content: [settingComponent.useSwitch({ checked: settings.developerTools.networkActivity }, (e) => {
+                        settings.developerTools.networkActivity = e.value;
+                        localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
+                        if (e.value == true) {
+                            networkPanel.container.style = "height: 300px;width: 100vw;position: fixed;bottom: 0;left: 0;right: 0; display: revert-layer;z-index:99999";
+                            setting.style.bottom = '316px';
+                        } else {
+                            networkPanel.container.style = "height: 300px;width: 100vw;position: fixed;bottom: 0;left: 0;right: 0; display: none;";
+                            setting.style.bottom = '16px';
+                        }
+                    })]
                 }, {
                     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" /><path d="M8.5 2h7" /><path d="M7 16h10" /></svg>`,
                     title: '測試版',
@@ -1014,6 +1010,14 @@
                 }
             };
 
+            if (settings.developerTools.networkActivity == true) {
+                networkPanel.container.style = "height: 300px;width: 100vw;position: fixed;bottom: 0;left: 0;right: 0; display: revert-layer;z-index:99999";
+                setting.style.bottom = '316px';
+            } else {
+                networkPanel.container.style = "height: 300px;width: 100vw;position: fixed;bottom: 0;left: 0;right: 0; display: none;";
+                setting.style.bottom = '16px';
+            }
+
             // Setup button group
             if (Object.keys(buttonGroups.theme.list()).includes(settings.appearance.theme)) {
                 buttonGroups.theme.select(settings.appearance.theme);
@@ -1047,8 +1051,551 @@
                 document.getElementById('hex_menu').style.display = settings.appearance.userMenu == 'original' ? 'revert-layer' : 'none';
             } catch (e) { return console.log(e) }
 
-            const supportAnswerTypes = ["alphabet", "trueFalse"];
+            const originalFetch = window.fetch;
+
+            window.fetch = function (input, init = {}) {
+                const controller = new AbortController();
+                init.signal = controller.signal;
+                const url = typeof input === 'string' ? input : input.url;
+
+                if (url.startsWith('https://analytics.google.com')) {
+                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'BLOCKED [ COLLECT ]');
+                    var now = performance.now();
+                    var id = requests.push({
+                        type: 'fetch',
+                        url: url,
+                        method: (!init.method ? 'GET' : init.method).toLocaleUpperCase(),
+                        body: init.body || null,
+                        requestHeaders: init.headers || {},
+                        startTime: now,
+                        endTime: now,
+                        duration: 0,
+                        statusCode: 0,
+                        response: '',
+                        responseHeaders: {},
+                        status: 'blocked',
+                        trace: getStackTrace()
+                    }) - 1;
+                    networkPanel.addRequest(requests[id]);
+                    return controller.abort();
+                }
+
+                var startTime = performance.now();
+
+                var id = requests.push({
+                    type: 'fetch',
+                    url: url,
+                    method: (!init.method ? 'GET' : init.method).toLocaleUpperCase(),
+                    body: init.body || null,
+                    requestHeaders: init.headers || {},
+                    startTime: startTime,
+                    status: 'pending',
+                    trace: getStackTrace()
+                }) - 1;
+
+                var nid = networkPanel.addRequest(requests[id]);
+
+                return originalFetch(input, init).then(async response => {
+                    try {
+                        const endTime = performance.now();
+                        requests[id].endTime = endTime;
+                        requests[id].duration = endTime - startTime;
+                        requests[id].status = 'loaded';
+                        requests[id].statusCode = response.status;
+                        response.clone().text().then(res => {
+                            requests[id].response = res;
+                        });
+                        var headers = {};
+                        response.headers.forEach((value, key) => {
+                            headers[key] = value;
+                        })
+                        requests[id].responseHeaders = headers;
+
+                        if (url.includes('graphql')) {
+                            var responseText = await response.clone().text();
+                            if (JSON.parse(requests[id].body).query.includes('useAnswerOnMapMutation')) {
+                                question_temp_data = responseText;
+                                getAnswer();
+                            } else if (JSON.parse(requests[id].body).query.includes('useQuestionSubmitMutation')) {
+                                const questionData = JSON.parse(question_temp_data).data.answerOnMap.gc.room.questions[0];
+                                const questionType = questionData.typeName.toLocaleLowerCase();
+                                console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', '送出答案，酬載:', JSON.parse(requests[id].body));
+                                var currectAnswers = [];
+                                if (questionType == supportQuestionTypes[0]) {
+                                    JSON.parse(requests[id].body).variables.input.answer.forEach(i => {
+                                        currectAnswers.push(order.indexOf(i));
+                                    })
+                                } else if (questionType == supportQuestionTypes[1]) {
+                                    currectAnswers = [JSON.parse(requests[id].body).variables.input.answer == "O" ? 0 : 1];
+                                }
+                                JSON.parse(responseText).data.victory == true && (sendAnswer(currectAnswers), console.log('submit'));
+                            }
+                        }
+                    } catch (e) { console.log(e) };
+                    networkPanel.updateRequest(nid, requests[id])
+                    return response;
+                }).catch(error => {
+                    try {
+                        const endTime = performance.now();
+                        requests[id].endTime = endTime;
+                        requests[id].duration = endTime - startTime;
+                        requests[id].status = 'loaded';
+                        requests[id].statusCode = 0;
+                        requests[id].responseHeaders = {};
+                        requests[id].response = '';
+                    } catch (e) { console.log(e) };
+                    networkPanel.updateRequest(nid, requests[id])
+                    return console.log(error);
+                });
+            };
+
             const supportQuestionTypes = ["choice", "true_or_false"];
+
+            function clickSendButton() {
+                // 比賽時不執行
+                if (mode.contests == true) return;
+                // 非比賽時且為隨機模式或自動送出模式
+                if (settings.answeringBehavior.random == true || settings.answeringBehavior.autoSend == true) {
+                    $("#answer-panel-submit-button").click();
+                }
+            }
+
+            function getAnswer() {
+                var loadingMessage = new Notify("loading", "正在取得答案...");
+                if (JSON.parse(question_temp_data).data.answerOnMap.gc == null) {
+                    return loadingMessage.close();
+                }
+                const questionData = JSON.parse(question_temp_data).data.answerOnMap.gc.room.questions[0];
+                const questionType = questionData.typeName.toLocaleLowerCase();
+                const answerCount = questionData.ansSlotCount;
+                if (supportQuestionTypes.indexOf(questionType) < 0) {
+                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', `不支援題目類型 ( ${questionType} ), 答案類型 ( ${questionData.answer_type} )`);
+                    loadingMessage.close();
+                    var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
+                    setTimeout(() => {
+                        resultMessage.close();
+                    }, 3000);
+                    return
+                }
+                if (questionType == supportQuestionTypes[0]) { // 選擇題
+                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', `答案總數 : ${answerCount}`);
+                }
+                req("POST", currentServer + "/v2/g", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
+                    qid: questionData.questionId,
+                    qt: questionData.content.replace(/<\/?.+?>/g, ""),
+                    qo: questionData.content.replace(/<\/?.+?>/g, "") == "" ? questionData.selections : [],
+                    version: Extension_Version
+                }), xhr => {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var answerList = JSON.parse(JSON.parse(xhr.response)["correct"]);
+                        var answerBtnAttrName = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
+                        if (JSON.parse(xhr.response)["type"] == "trusted_answer") {
+                            questionExist = true;
+                        } else {
+                            questionExist = false;
+                        }
+                        console.log(answerList)
+                        if (questionType == supportQuestionTypes[0] && answerList.length > 0) {
+                            /************ 選擇題 ************/
+                            for (let i = 0; i < answerList.length; i++) {
+                                for (let j = 0; j < questionData.selections.length; j++) {
+                                    // 還原選項位置
+                                    if (answerList[i] == order.indexOf(questionData.selections[j]["position"])) {
+                                        answerList[i] = order.indexOf(questionData.selections[j]["position"]);
+                                    }
+                                }
+                            }
+                            var selected = 0;
+                            for (let i = 0; i < answerList.length; i++) {
+                                var optionElements = $('[data-position]', true);
+                                for (let j = 0; j < optionElements.length; j++) {
+                                    console.log(optionElements[j].innerHTML, questionData.selections[answerList[i]].content)
+                                    if (optionElements[j].innerHTML.includes(questionData.selections[answerList[i]].content)) {
+                                        if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
+                                            // 選取選項
+                                            $("[data-position]", true)[j].click();
+                                            $("[data-position]", true)[j].setAttribute('data-selected', true);
+
+                                            selected++;
+                                        }
+                                        // 高光選項
+                                        $("[data-position]", true)[j].setAttribute(answerBtnAttrName, "");
+                                    }
+                                }
+                            }
+                            loadingMessage.close();
+                            var resultMessage = new Notify("done", "成功取得答案");
+                            setTimeout(() => {
+                                resultMessage.close();
+                            }, 3000);
+                            if (selected > 0) {
+                                clickSendButton();
+                            }
+                        } else if (answerList.length > 0) {
+                            /************ 是非題 ************/
+                            var selected = 0;
+                            for (let i = 0; i < answerList.length; i++) {
+                                if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
+                                    // 選取選項
+                                    $("[data-position]", true)[answerList[i]].click();
+                                    $("[data-position]", true)[answerList[i]].setAttribute('data-selected', true);
+                                    selected++;
+                                }
+                                // 高光選項
+                                $("[data-position]", true)[answerList[i]].setAttribute(answerBtnAttrName, "");
+                            }
+                            loadingMessage.close();
+                            var resultMessage = new Notify("done", "成功取得答案");
+                            setTimeout(() => {
+                                resultMessage.close();
+                            }, 3000);
+                            if (selected > 0) {
+                                clickSendButton();
+                            }
+                        } else {
+                            console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "該題目為不支援的類型或未找到");
+                            loadingMessage.close();
+                            var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
+                            setTimeout(() => {
+                                resultMessage.close();
+                            }, 3000);
+                            if (settings.answeringBehavior.random == true && mode.contests == false) {
+                                /************ 隨機模式 ************/
+                                var selected = 0;
+                                if (questionType == supportQuestionTypes[0]) {
+                                    // 依照答案數量隨機生成答案 ( 選擇題 )
+                                    generateRandomAnswers(answerCount, $("[data-position]", true).length).forEach(i => {
+                                        $("[data-position]", true)[i].click();
+                                        $("[data-position]", true)[i].setAttribute('data-selected', true);
+                                        selected++;
+                                    })
+                                } else if (questionType == supportQuestionTypes[1]) {
+                                    // 隨機二選一 ( 是非題 )
+                                    var option = Math.floor(Math.random() * $("[data-position]", true).length);
+                                    $("[data-position]", true)[option].click();
+                                    $("[data-position]", true)[option].setAttribute('data-selected', true);
+                                    selected++;
+                                }
+                                if (selected > 0) {
+                                    clickSendButton();
+                                }
+                            } else {
+                                // 不支援的類型或未找到
+                                return;
+                            }
+                        }
+                    } else if (xhr.readyState === 4) {
+                        loadingMessage.close();
+                        var resultMessage = new Notify("error", "獲取失敗");
+                        setTimeout(() => {
+                            resultMessage.close();
+                        }, 3000);
+                    }
+                })
+            };
+
+            function sendAnswer(answer) {
+                if (!Array.isArray(answer) || questionExist == true) {
+                    questionExist = false;
+                    return console.log();
+                }
+                const questionData = JSON.parse(question_temp_data).data.answerOnMap.gc.room.questions;
+                req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
+                    question_id: questionData.questionId,
+                    question_content: questionData.content.replace(/<\/?.+?>/g, ""),
+                    question_options: questionData.selections,
+                    question_answers: answer
+                }), xhr => {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        if (xhr.response == "Success") {
+                            return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "成功新增題目資料，內容:\n", {
+                                question_id: questionData.questionId,
+                                question_content: questionData.content.replace(/<\/?.+?>/g, ""),
+                                question_options: questionData.selections,
+                                question_answers: answer
+                            });
+                        } else {
+                            return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "無法新增題目資料");
+                        }
+                    }
+                })
+            }
+
+            const callback = async () => {
+                if (($("#answer-panel") !== null || $("#answer-panel-question-with-input") !== null) && question_temp_data.data != undefined) {
+                    // 顯示答案
+                    answer = [];
+                    const questionData = JSON.parse(question_temp_data.data).data.answerOnMap.gc.room.questions;
+                    const questionType = questionData.typeName.toLocaleLowerCase();
+
+                    if (questionType == supportQuestionTypes[0]) {
+                        if (document.querySelector('[data-correct="true"]') !== null) {
+                            var ga = document.querySelectorAll('[data-correct="true"]');
+                            for (let i = 0; i < ga.length; i++) {
+                                answer.push(order.indexOf(ga[i].getAttribute("data-org-position")));
+                            }
+                        }
+                    } else if (questionType == supportQuestionTypes[1]) {
+                        if (document.querySelector(".pgo-style-question-detail-info-l7L8qm") !== null) {
+                            document.querySelector(".pgo-style-question-detail-info-l7L8qm").innerHTML == "O" ? answer = [0] : answer = [1]
+                        }
+                    }
+                    answer !== null && sendAnswer(answer);
+                } 
+            }
+            const ob = new MutationObserver(callback);
+            ob.observe(document.body, {
+                childList: true
+            });
+
+            var injected = false;
+            var checkInjectedXhrURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+            var xhr = window.XMLHttpRequest.prototype;
+
+            (function () {
+                var xhr = window.XMLHttpRequest.prototype;
+                var originalOpen = xhr.open;
+                var originalSend = xhr.send;
+                var originalSetRequestHeader = xhr.setRequestHeader;
+
+                Object.defineProperty(xhr, 'setRequestHeader', {
+                    value: function overrideOpen(header, value) {
+                        // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Overriding setRequestHeader method!');
+                        // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'setHeader', { header, value });
+                        if (this._requestHeaders) {
+                            this._requestHeaders[header] = value;
+                        }
+
+                        originalSetRequestHeader.call(this, header, value);
+                        // return originalSetRequestHeader.apply(this, arguments);
+                    },
+                    configurable: false,
+                    writable: false
+                })
+
+                Object.defineProperty(xhr, 'open', {
+                    value: function overrideOpen(method, url) {
+                        // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Overriding open method!');
+                        console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Original XHR URL:', url, '\nTrace:', getStackTrace());
+                        this._url = url;
+                        this._requestHeaders = {};
+                        this.id = requests.push({
+                            type: 'xhr',
+                            url: url,
+                            method: method.toLocaleUpperCase()
+                        }) - 1;
+                        return originalOpen.apply(this, arguments);
+                    },
+                    configurable: false,
+                    writable: false
+                });
+
+                Object.defineProperty(xhr, 'send', {
+                    value: function overrideSend(payload) {
+                        // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Overriding send method!');
+                        const xhr = this;
+                        const originalOnReadyStateChange = xhr.onreadystatechange;
+                        const startTime = performance.now();
+                        if (requests[this.id]) {
+                            requests[this.id].startTime = startTime;
+                            requests[this.id].body = payload || null;
+                            requests[this.id].requestHeaders = this._requestHeaders || {};
+                            requests[this.id].status = 'pending';
+                            requests[this.id].trace = getStackTrace();
+                        }
+
+                        var nid = networkPanel.addRequest(requests[this.id]);
+
+                        function processResult(status) {
+                            try {
+                                const endTime = performance.now();
+                                if (requests[this.id]) {
+                                    if (requests[this.id].status == 'blocked' || requests[this.id].status == 'loaded') return;
+                                    requests[this.id].endTime = endTime;
+                                    requests[this.id].duration = endTime - startTime;
+                                    requests[this.id].status = status || 'loaded';
+                                    requests[this.id].statusCode = xhr.status;
+                                    requests[this.id].response = xhr.responseText;
+                                    var responseHeaders = xhr.getAllResponseHeaders();
+                                    var headers = {};
+                                    responseHeaders.trim().split('\r\n').filter(text => {
+                                        return text.length > 0;
+                                    }).forEach(line => {
+                                        const [name, value] = line.split(': ');
+                                        headers[name] = value;
+                                    });
+                                    requests[this.id].responseHeaders = headers;
+                                    networkPanel.updateRequest(nid, requests[this.id]);
+                                }
+                            } catch (e) { console.log(e); };
+                        }
+
+                        processResult = processResult.bind(this);
+
+                        try {
+                            disabledURLs.forEach(url => {
+                                if (this._url.includes(url)) {
+                                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'BLOCKED [ COLLECT ]', this._url);
+                                    processResult('blocked');
+                                    xhr.abort();
+                                    this.abort();
+                                }
+                            })
+                        } catch (e) { console.log(e); };
+
+                        xhr.addEventListener('loadend', () => { processResult('loaded') });
+                        xhr.addEventListener('timeout', () => { processResult('timeouted') });
+                        xhr.addEventListener('abort', () => { processResult('aborted') });
+
+                        xhr.onreadystatechange = function () {
+                            // console.log(`XHR readyState: ${xhr.readyState}, status: ${xhr.status}, url: ${xhr._url}`, '\nTrace:', getStackTrace());
+                            try {
+                                if (xhr._url == checkInjectedXhrURL) {
+                                    injected = true;
+                                }
+                                if (this.readyState === 4 && this.status == 200) {
+                                    processResult('loaded');
+                                    // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Details:', { data: xhr.response, url: xhr._url })
+                                    if (xhr._url.includes('graphql')) {
+                                        try {
+                                            if (JSON.parse(payload).query.includes('useAnswerOnMapMutation')) {
+                                                question_temp_data = xhr.response;
+                                                getAnswer();
+                                            } else if (JSON.parse(payload).query.includes('useQuestionSubmitMutation')) {
+                                                const questionData = JSON.parse(question_temp_data).data.question_data.question;
+                                                const questionType = questionData.typeName.toLocaleLowerCase();
+                                                console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', '送出答案，酬載:', JSON.parse(payload));
+                                                var currectAnswers = [];
+                                                if (questionType == supportQuestionTypes[0]) {
+                                                    JSON.parse(payload).ans.forEach(i => {
+                                                        currectAnswers.push(order.indexOf(i));
+                                                    })
+                                                } else if (questionType == supportQuestionTypes[1]) {
+                                                    currectAnswers = [JSON.parse(payload).ans == "O" ? 0 : 1];
+                                                }
+                                                JSON.parse(xhr.response).data.correct == 1 && (sendAnswer(currectAnswers), console.log('submit'));
+                                            }
+                                        } catch (e) { console.log(e) }
+                                    } else if (xhr._url == "/rooms/get_detailed_answer") {
+                                        const oldTypes = ["choice", "true_or_false"];
+                                        const questionData = JSON.parse(xhr.response).data.question;
+                                        const questionType = questionData.type.toLocaleLowerCase();
+                                        var currectAnswers = [];
+                                        if (questionType == oldTypes[0]) {
+                                            if (questionData.ans_slot_count == 1) {
+                                                currectAnswers = [order.indexOf(questionData.answer)];
+                                            } else {
+                                                questionData.answer.forEach(answer => {
+                                                    currectAnswers.push(order.indexOf(answer));
+                                                })
+                                            }
+                                        } else if (questionType == oldTypes[1]) {
+                                            currectAnswers = [questionData.answer == "O" ? 0 : 1];
+                                        }
+                                        console.log('get_detailed_answer')
+                                        req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
+                                            question_id: questionData.render_info.q_info_id,
+                                            question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                                            question_options: questionData.render_info.selections,
+                                            question_answers: currectAnswers
+                                        }), xhr => {
+                                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                                if (xhr.response == "Success") {
+                                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "成功新增題目資料，內容:\n", {
+                                                        question_id: questionData.render_info.q_info_id,
+                                                        question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
+                                                        question_options: questionData.render_info.selections,
+                                                        question_answers: currectAnswers
+                                                    });
+                                                } else {
+                                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "無法新增題目資料");
+                                                }
+                                            }
+                                        })
+                                    }
+                                }
+                                if (originalOnReadyStateChange) {
+                                    originalOnReadyStateChange.apply(this, arguments);
+                                }
+                            } catch (e) { console.log(e); };
+                        };
+                        return originalSend.apply(this, arguments);
+                    },
+                    configurable: false,
+                    writable: false
+                });
+            })();
+
+            /*
+            const originalXhrSend = window.XMLHttpRequest.prototype.send;
+            window.XMLHttpRequest.prototype.send = function (payload) {
+
+            };
+            */
+
+            Object.freeze(xhr);
+
+            var checkInjectedXhr = new XMLHttpRequest();
+            checkInjectedXhr.open('GET', checkInjectedXhrURL);
+            checkInjectedXhr.send(null);
+            checkInjectedXhr.onloadend = () => {
+                if (injected == true) {
+                    installSuccessfully();
+                } else {
+                    installFailed();
+                    var modal = document.createElement("div");
+                    modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 載入失敗，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
+                    modal.className = "ext-modal";
+                    document.body.appendChild(modal);
+                }
+            }
+
+            await fetch(currentServer + `/v2/expired/${JSON.parse(currentGc).unique_user_id}`, {
+                "body": null,
+                "method": "POST",
+                "mode": "cors"
+            }).then(res => {
+                return res.json();
+            }).then(res => {
+                if (res.status == "ok" && res.expired == false) {
+                    need_to_update = false;
+                }
+            }).catch(err => {
+                installFailed();
+            }).finally(() => {
+                return;
+            })
+            if (need_to_update == true) {
+                updateElement.style = "position: fixed;top: 0px;left: 0px;width: 100vw;height: 100vh;background: rgba(0, 0, 0, 0.7);z-index: 0;opacity: 0;display: flex;align-items: center;justify-content: center;transition: all 0.2s;";
+                updateElement.innerHTML = `<div class="pgo-ext-update-element" style="opacity: 0;scale: 2;background: rgb(255, 255, 255);padding: 2rem 4rem 2rem 3rem;border-radius: 6px;font-size: 18px;display: flex;align-items: center;gap: 2rem;transition: all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" class="notify-loading notify-loading-spinner"></svg>更新使用者資訊中...</div>`;
+                document.body.appendChild(updateElement);
+                setTimeout(() => {
+                    updateElement.querySelector('.pgo-ext-update-element').style.opacity = "1";
+                    updateElement.style.zIndex = '999999999999999999999999';
+                    updateElement.style.opacity = '1';
+                    updateElement.querySelector('.pgo-ext-update-element').style.scale = "1";
+                }, 200)
+            }
+            await fetch("https://www.pagamo.org/api/courses_lobby/courses", {
+                "headers": {
+                    "content-type": "application/json"
+                },
+                "referrer": "https://www.pagamo.org/",
+                "referrerPolicy": "strict-origin-when-cross-origin",
+                "body": "{\"public\":false,\"category\":\"global\"}",
+                "method": "POST",
+                "mode": "cors",
+                "credentials": "include"
+            }).then(res => {
+                return res.json();
+            }).then(res => {
+                CourseCodes = res.data.own_courses;
+            }).catch(err => {
+                CourseCodes = 'error';
+            }).finally(() => {
+                console.log(CourseCodes);
+                return;
+            });
 
             req("POST", currentServer + "/v2/token", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify(Object.assign({
                 real_name: JSON.parse(currentGc).real_name,
@@ -1077,306 +1624,6 @@
 
                     ["alphabet", "trueFalse"]; // alphabet 選擇題 ( answer )
                     ["choice", "true_or_false"]; // choice 選擇題 ( question )
-
-                    function clickSendButton() {
-                        // 比賽時不執行
-                        if (mode.contests == true) return;
-                        // 非比賽時且為隨機模式或自動送出模式
-                        if (settings.answeringBehavior.random == true || settings.answeringBehavior.autoSend == true) {
-                            $("#answer-panel-submit-button").click();
-                        }
-                    }
-
-                    function getAnswer() {
-                        var loadingMessage = new Notify("loading", "正在取得答案...");
-                        const questionData = JSON.parse(question_temp_data).data.question_data.question;
-                        if (supportAnswerTypes.indexOf(questionData.answer_type) < 0 || supportQuestionTypes.indexOf(questionData.type) < 0) {
-                            console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', `不支援題目類型 ( ${questionData.type} ), 答案類型 ( ${questionData.answer_type} )`);
-                            loadingMessage.close();
-                            var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
-                            setTimeout(() => {
-                                resultMessage.close();
-                            }, 3000);
-                            return 
-                        }
-                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) { // 選擇題
-                            console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', `答案總數 : ${questionData.render_info.answers_count}`);
-                        }
-                        req("POST", currentServer + "/v2/g", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
-                            qid: questionData.render_info.q_info_id,
-                            qt: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
-                            qo: questionData.render_info.content.replace(/<\/?.+?>/g, "") == "" && questionData.render_info.selections,
-                            version: Extension_Version
-                        }), xhr => {
-                            if (xhr.readyState === 4 && xhr.status === 200) {
-                                var answerList = JSON.parse(JSON.parse(xhr.response)["correct"]);
-                                var answerBtnAttrName = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
-                                if (JSON.parse(xhr.response)["type"] == "trusted_answer") {
-                                    questionExist = true;
-                                } else {
-                                    questionExist = false;
-                                }
-                                if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0] && answerList.length > 0) {
-                                    /************ 選擇題 ************/
-                                    for (let i = 0; i < answerList.length; i++) {
-                                        for (let j = 0; j < questionData.render_info.selections.length; j++) {
-                                            // 還原選項位置
-                                            if (answerList[i] == order.indexOf(questionData.render_info.selections[j]["position"])) {
-                                                answerList[i] = order.indexOf(questionData.render_info.selections[j]["position"]);
-                                            }
-                                        }
-                                    }
-                                    var selected = 0;
-                                    for (let i = 0; i < answerList.length; i++) {
-                                        var optionElements = $('[data-org-position]', true);
-                                        for (let j = 0; j < optionElements.length; j++) {
-                                            if (optionElements[j].getAttribute("data-org-position") == order[answerList[i]]) {
-                                                if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
-                                                    // 選取選項
-                                                    $("[data-real-choice]", true)[j].click();
-                                                    selected++;
-                                                }
-                                                // 高光選項
-                                                $("[data-real-choice]", true)[j].setAttribute(answerBtnAttrName, "");
-                                            }
-                                        }
-                                    }
-                                    loadingMessage.close();
-                                    var resultMessage = new Notify("done", "成功取得答案");
-                                    setTimeout(() => {
-                                        resultMessage.close();
-                                    }, 3000);
-                                    if (selected > 0) {
-                                        clickSendButton();
-                                    }
-                                } else if (answerList.length > 0) {
-                                    /************ 是非題 ************/
-                                    var selected = 0;
-                                    for (let i = 0; i < answerList.length; i++) {
-                                        if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
-                                            // 選取選項
-                                            $("[data-real-choice]", true)[answerList[i]].click();
-                                            selected++;
-                                        }
-                                        // 高光選項
-                                        $("[data-real-choice]", true)[answerList[i]].setAttribute(answerBtnAttrName, "");
-                                    }
-                                    loadingMessage.close();
-                                    var resultMessage = new Notify("done", "成功取得答案");
-                                    setTimeout(() => {
-                                        resultMessage.close();
-                                    }, 3000);
-                                    if (selected > 0) {
-                                        clickSendButton();
-                                    }
-                                } else {
-                                    console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "該題目為不支援的類型或未找到");
-                                    loadingMessage.close();
-                                    var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
-                                    setTimeout(() => {
-                                        resultMessage.close();
-                                    }, 3000);
-                                    if (settings.answeringBehavior.random == true && mode.contests == false) {
-                                        /************ 隨機模式 ************/
-                                        var selected = 0;
-                                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
-                                            // 依照答案數量隨機生成答案 ( 選擇題 )
-                                            generateRandomAnswers(questionData.render_info.answers_count, $("[data-real-choice]", true).length).forEach(i => {
-                                                $("[data-real-choice]", true)[i].click();
-                                                selected++;
-                                            })
-                                        } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
-                                            // 隨機二選一 ( 是非題 )
-                                            $("[data-real-choice]", true)[Math.floor(Math.random() * $("[data-real-choice]", true).length)].click();
-                                            selected++;
-                                        }
-                                        if (selected > 0) {
-                                            clickSendButton();
-                                        }
-                                    } else {
-                                        // 不支援的類型或未找到
-                                        return;
-                                    }
-                                }
-                            } else if (xhr.readyState === 4) {
-                                loadingMessage.close();
-                                var resultMessage = new Notify("error", "獲取失敗");
-                                setTimeout(() => {
-                                    resultMessage.close();
-                                }, 3000);
-                            }
-                        })
-                    };
-
-                    function sendAnswer(answer) {
-                        if (!Array.isArray(answer) || questionExist == true) {
-                            questionExist = false;
-                            return console.log();
-                        }
-                        const questionData = JSON.parse(question_temp_data).data.question_data.question;
-                        req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
-                            question_id: questionData.render_info.q_info_id,
-                            question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
-                            question_options: questionData.render_info.selections,
-                            question_answers: answer
-                        }), xhr => {
-                            if (xhr.readyState === 4 && xhr.status === 200) {
-                                if (xhr.response == "Success") {
-                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "成功新增題目資料，內容:\n", {
-                                        question_id: questionData.render_info.q_info_id,
-                                        question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
-                                        question_options: questionData.render_info.selections,
-                                        question_answers: answer
-                                    });
-                                } else {
-                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "無法新增題目資料");
-                                }
-                            }
-                        })
-                    }
-
-                    const callback = async () => {
-                        if (($("#answer-panel") !== null || $("#answer-panel-question-with-input") !== null) && question_temp_data.data != undefined) {
-                            // 顯示答案
-                            answer = [];
-                            const questionData = JSON.parse(question_temp_data.data).data.question_data.question;
-                            if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
-                                if (document.querySelector('[data-correct="true"]') !== null) {
-                                    var ga = document.querySelectorAll('[data-correct="true"]');
-                                    for (let i = 0; i < ga.length; i++) {
-                                        answer.push(order.indexOf(ga[i].getAttribute("data-org-position")));
-                                    }
-                                }
-                            } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
-                                if (document.querySelector(".pgo-style-question-detail-info-l7L8qm") !== null) {
-                                    document.querySelector(".pgo-style-question-detail-info-l7L8qm").innerHTML == "O" ? answer = [0] : answer = [1]
-                                }
-                            }
-                            answer !== null && sendAnswer(answer);
-                        }
-                    }
-                    const ob = new MutationObserver(callback);
-                    ob.observe(document.body, {
-                        childList: true
-                    });
-
-                    var injected = false;
-                    var checkInjectedXhrURL = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
-
-                    const originalXhrOpen = window.XMLHttpRequest.prototype.open;
-                    window.XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
-                        this._url = url;
-                        return originalXhrOpen.apply(this, arguments);
-                    };
-
-                    var xhr = window.XMLHttpRequest.prototype;
-                    var originalOpen = xhr.open;
-
-                    Reflect.set(xhr, 'open', function overrideOpen(method, url) {
-                        this._url = url;
-                        return originalOpen.apply(this, arguments);
-                    });
-
-                    (function () {
-                        var xhr = window.XMLHttpRequest.prototype;
-                        var originalOpen = xhr.open;
-
-                        Object.defineProperty(xhr, 'open', {
-                            value: function overrideOpen(method, url) {
-                                // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Overriding open method!');
-                                // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Original XHR URL:', url, '\nTrace:', getStackTrace());
-                                this._url = url;
-                                return originalOpen.apply(this, arguments);
-                            },
-                            configurable: false,
-                            writable: false
-                        });
-                    })();
-
-                    const originalXhrSend = window.XMLHttpRequest.prototype.send;
-                    window.XMLHttpRequest.prototype.send = function (payload) {
-                        const xhr = this;
-                        const originalOnReadyStateChange = xhr.onreadystatechange;
-                        xhr.onreadystatechange = function () {
-                            // console.log(`XHR readyState: ${xhr.readyState}, status: ${xhr.status}, url: ${xhr._url}`, '\nTrace:', getStackTrace());
-                            try {
-                                if (xhr._url == checkInjectedXhrURL) {
-                                    injected = true;
-                                }
-                                if (this.readyState === 4 && this.status == 200) {
-                                    // console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', 'Details:', { data: xhr.response, url: xhr._url })
-                                    if (xhr._url == "/rooms/train.json" || xhr._url == "/rooms/attack.json") {
-                                        question_temp_data = xhr.response;
-                                        getAnswer();
-                                    } else if (xhr._url == "/rooms/submit.json") {
-                                        const questionData = JSON.parse(question_temp_data).data.question_data.question;
-                                        console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', '送出答案，酬載:', JSON.parse(payload));
-                                        var currectAnswers = [];
-                                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
-                                            JSON.parse(payload).ans.forEach(i => {
-                                                currectAnswers.push(order.indexOf(i));
-                                            })
-                                        } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
-                                            currectAnswers = [JSON.parse(payload).ans == "O" ? 0 : 1];
-                                        }
-                                        JSON.parse(xhr.response).data.correct == 1 && sendAnswer(currectAnswers);
-                                    } else if (xhr._url == "/rooms/get_detailed_answer") {
-                                        const questionData = JSON.parse(xhr.response).data.question;
-                                        var currectAnswers = [];
-                                        if (questionData.answer_type == supportAnswerTypes[0] && questionData.type == supportQuestionTypes[0]) {
-                                            if (questionData.ans_slot_count == 1) {
-                                                currectAnswers = [order.indexOf(questionData.answer)];
-                                            } else {
-                                                questionData.answer.forEach(answer => {
-                                                    currectAnswers.push(order.indexOf(answer));
-                                                })
-                                            }
-                                        } else if (questionData.answer_type == supportAnswerTypes[1] && questionData.type == supportQuestionTypes[1]) {
-                                            currectAnswers = [questionData.answer == "O" ? 0 : 1];
-                                        }
-                                        req("POST", currentServer + "/v2/a", true, [["Content-Type", "application/json;charset=UTF-8"]], JSON.stringify({
-                                            question_id: questionData.render_info.q_info_id,
-                                            question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
-                                            question_options: questionData.render_info.selections,
-                                            question_answers: currectAnswers
-                                        }), xhr => {
-                                            if (xhr.readyState === 4 && xhr.status === 200) {
-                                                if (xhr.response == "Success") {
-                                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "成功新增題目資料，內容:\n", {
-                                                        question_id: questionData.render_info.q_info_id,
-                                                        question_content: questionData.render_info.content.replace(/<\/?.+?>/g, ""),
-                                                        question_options: questionData.render_info.selections,
-                                                        question_answers: currectAnswers
-                                                    });
-                                                } else {
-                                                    return console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "無法新增題目資料");
-                                                }
-                                            }
-                                        })
-                                    }
-                                }
-                                originalOnReadyStateChange.apply(this, arguments);
-                            } catch (e) { };
-                        };
-                        return originalXhrSend.apply(this, arguments);
-                    };
-
-                    Object.freeze(xhr);
-
-                    var checkInjectedXhr = new XMLHttpRequest();
-                    checkInjectedXhr.open('GET', checkInjectedXhrURL);
-                    checkInjectedXhr.send(null);
-                    checkInjectedXhr.onloadend = () => {
-                        if (injected == true) {
-                            installSuccessfully();
-                        } else {
-                            installFailed();
-                            var modal = document.createElement("div");
-                            modal.innerHTML = `<div class="ext-mode-modal"><div class="ext-mode ext-warn-mode"><span class="ext-modal-warn">錯誤 : 載入失敗，前往<a target="_blank" href="https://github.com/Siyu1017/pagamo-ext/blob/main/ERROR_HANDLING.md">此處</a>查看相關說明</span></div><div class="close" onclick="this.parentNode.parentNode.remove();"></div></div>`;
-                            modal.className = "ext-modal";
-                            document.body.appendChild(modal);
-                        }
-                    }
                 } else {
                     installFailed();
                     var modal = document.createElement("div");
