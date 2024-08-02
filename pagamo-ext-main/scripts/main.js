@@ -7,7 +7,7 @@
 "use strict";
 
 (() => {
-    var Extension_Version = "2.3.0";
+    var Extension_Version = "2.3.1";
 
     var networkPanel = new NetworkPanel(document.documentElement);
 
@@ -1012,11 +1012,15 @@
 
             if (settings.developerTools.networkActivity == true) {
                 networkPanel.container.style = "height: 300px;width: 100vw;position: fixed;bottom: 0;left: 0;right: 0; display: revert-layer;z-index:99999";
-                setting.style.bottom = '316px';
+                setting.style.bottom = `${316 > window.innerHeight - setting.offsetHeight - 16 ? window.innerHeight - setting.offsetHeight - 16 : 316}px`;
             } else {
                 networkPanel.container.style = "height: 300px;width: 100vw;position: fixed;bottom: 0;left: 0;right: 0; display: none;";
                 setting.style.bottom = '16px';
             }
+
+            networkPanel.resizeListeners.push((height) => {
+                setting.style.bottom = `${height + 16 > window.innerHeight - setting.offsetHeight - 16 ? window.innerHeight - setting.offsetHeight - 16 : height + 16}px`;
+            })
 
             // Setup button group
             if (Object.keys(buttonGroups.theme.list()).includes(settings.appearance.theme)) {
@@ -1149,7 +1153,7 @@
                 });
             };
 
-            const supportQuestionTypes = ["choice", "true_or_false"];
+            const supportQuestionTypes = ["choice", "trueorfalse"];
 
             function clickSendButton() {
                 // 比賽時不執行
@@ -1187,106 +1191,107 @@
                     version: Extension_Version
                 }), xhr => {
                     if (xhr.readyState === 4 && xhr.status === 200) {
-                        var answerList = JSON.parse(JSON.parse(xhr.response)["correct"]);
-                        var answerBtnAttrName = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
-                        if (JSON.parse(xhr.response)["type"] == "trusted_answer") {
-                            questionExist = true;
-                        } else {
-                            questionExist = false;
-                        }
-                        console.log(answerList)
-                        if (questionType == supportQuestionTypes[0] && answerList.length > 0) {
-                            /************ 選擇題 ************/
-                            for (let i = 0; i < answerList.length; i++) {
-                                for (let j = 0; j < questionData.selections.length; j++) {
-                                    // 還原選項位置
-                                    if (answerList[i] == order.indexOf(questionData.selections[j]["position"])) {
-                                        answerList[i] = order.indexOf(questionData.selections[j]["position"]);
-                                    }
-                                }
+                        try {
+                            var answerList = JSON.parse(JSON.parse(xhr.response)["correct"]);
+                            var answerBtnAttrName = `pgo-ext-${JSON.parse(xhr.response)["type"].replace('_answer', '')}-btn`;
+                            if (JSON.parse(xhr.response)["type"] == "trusted_answer") {
+                                questionExist = true;
+                            } else {
+                                questionExist = false;
                             }
-                            var selected = 0;
-                            for (let i = 0; i < answerList.length; i++) {
-                                var optionElements = $('[data-position]', true);
-                                for (let j = 0; j < optionElements.length; j++) {
-                                    console.log(optionElements[j].innerHTML, questionData.selections[answerList[i]].content)
-                                    if (optionElements[j].innerHTML.includes(questionData.selections[answerList[i]].content)) {
-                                        if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
-                                            // 選取選項
-                                            $("[data-position]", true)[j].click();
-                                            $("[data-position]", true)[j].setAttribute('data-selected', true);
-
-                                            selected++;
+                            if (questionType == supportQuestionTypes[0] && answerList.length > 0) {
+                                /************ 選擇題 ************/
+                                for (let i = 0; i < answerList.length; i++) {
+                                    for (let j = 0; j < questionData.selections.length; j++) {
+                                        // 還原選項位置
+                                        if (answerList[i] == order.indexOf(questionData.selections[j]["position"])) {
+                                            answerList[i] = order.indexOf(questionData.selections[j]["position"]);
                                         }
-                                        // 高光選項
-                                        $("[data-position]", true)[j].setAttribute(answerBtnAttrName, "");
                                     }
                                 }
-                            }
-                            loadingMessage.close();
-                            var resultMessage = new Notify("done", "成功取得答案");
-                            setTimeout(() => {
-                                resultMessage.close();
-                            }, 3000);
-                            if (selected > 0) {
-                                clickSendButton();
-                            }
-                        } else if (answerList.length > 0) {
-                            /************ 是非題 ************/
-                            var selected = 0;
-                            for (let i = 0; i < answerList.length; i++) {
-                                if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
-                                    // 選取選項
-                                    $("[data-position]", true)[answerList[i]].click();
-                                    $("[data-position]", true)[answerList[i]].setAttribute('data-selected', true);
-                                    selected++;
-                                }
-                                // 高光選項
-                                $("[data-position]", true)[answerList[i]].setAttribute(answerBtnAttrName, "");
-                            }
-                            loadingMessage.close();
-                            var resultMessage = new Notify("done", "成功取得答案");
-                            setTimeout(() => {
-                                resultMessage.close();
-                            }, 3000);
-                            if (selected > 0) {
-                                clickSendButton();
-                            }
-                        } else {
-                            console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "該題目為不支援的類型或未找到");
-                            loadingMessage.close();
-                            var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
-                            setTimeout(() => {
-                                resultMessage.close();
-                            }, 3000);
-                            if (settings.answeringBehavior.random == true && mode.contests == false) {
-                                /************ 隨機模式 ************/
                                 var selected = 0;
-                                if (questionType == supportQuestionTypes[0]) {
-                                    // 依照答案數量隨機生成答案 ( 選擇題 )
-                                    generateRandomAnswers(answerCount, $("[data-position]", true).length).forEach(i => {
-                                        $("[data-position]", true)[i].click();
-                                        $("[data-position]", true)[i].setAttribute('data-selected', true);
-                                        selected++;
-                                    })
-                                } else if (questionType == supportQuestionTypes[1]) {
-                                    // 隨機二選一 ( 是非題 )
-                                    var option = Math.floor(Math.random() * $("[data-position]", true).length);
-                                    $("[data-position]", true)[option].click();
-                                    $("[data-position]", true)[option].setAttribute('data-selected', true);
-                                    selected++;
+                                for (let i = 0; i < answerList.length; i++) {
+                                    var optionElements = $('[data-position]', true);
+                                    for (let j = 0; j < optionElements.length; j++) {
+                                        if (optionElements[j].innerHTML.includes(questionData.selections[answerList[i]].content)) {
+                                            if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
+                                                // 選取選項
+                                                $("[data-position]", true)[j].click();
+                                                $("[data-position]", true)[j].setAttribute('data-selected', true);
+
+                                                selected++;
+                                            }
+                                            // 高光選項
+                                            $("[data-position]", true)[j].setAttribute(answerBtnAttrName, "");
+                                        }
+                                    }
                                 }
+                                loadingMessage.close();
+                                var resultMessage = new Notify("done", "成功取得答案");
+                                setTimeout(() => {
+                                    resultMessage.close();
+                                }, 3000);
+                                if (selected > 0) {
+                                    clickSendButton();
+                                }
+                            } else if (answerList.length > 0) {
+                                /************ 是非題 ************/
+                                var selected = 0;
+                                for (let i = 0; i < answerList.length; i++) {
+                                    if ((settings.answeringBehavior.autoSelect == true || settings.answeringBehavior.random == true) && mode.contests == false) {
+                                        // 選取選項
+                                        console.log(answerList[i], $(".pgo-Selection-selection-button-3yOH73", true)[answerList[i]])
+                                        $(".pgo-Selection-selection-button-3yOH73", true)[answerList[i]].click();
+                                        $(".pgo-Selection-selection-button-3yOH73", true)[answerList[i]].setAttribute('data-selected', true);
+                                        selected++;
+                                    }
+                                    // 高光選項
+                                    $(".pgo-Selection-selection-button-3yOH73", true)[answerList[i]].setAttribute(answerBtnAttrName, "");
+                                }
+                                loadingMessage.close();
+                                var resultMessage = new Notify("done", "成功取得答案");
+                                setTimeout(() => {
+                                    resultMessage.close();
+                                }, 3000);
                                 if (selected > 0) {
                                     clickSendButton();
                                 }
                             } else {
-                                // 不支援的類型或未找到
-                                return;
+                                console.log('%c[PAGAMO PLUG-IN]', 'color:#e344ff', "該題目為不支援的類型或未找到");
+                                loadingMessage.close();
+                                var resultMessage = new Notify("error", "該題目為不支援的類型或未找到答案");
+                                setTimeout(() => {
+                                    resultMessage.close();
+                                }, 3000);
+                                if (settings.answeringBehavior.random == true && mode.contests == false) {
+                                    /************ 隨機模式 ************/
+                                    var selected = 0;
+                                    if (questionType == supportQuestionTypes[0]) {
+                                        // 依照答案數量隨機生成答案 ( 選擇題 )
+                                        generateRandomAnswers(answerCount, $("[data-position]", true).length).forEach(i => {
+                                            $("[data-position]", true)[i].click();
+                                            $("[data-position]", true)[i].setAttribute('data-selected', true);
+                                            selected++;
+                                        })
+                                    } else if (questionType == supportQuestionTypes[1]) {
+                                        // 隨機二選一 ( 是非題 )
+                                        var option = Math.floor(Math.random() * $(".pgo-Selection-selection-button-3yOH73", true).length);
+                                        $(".pgo-Selection-selection-button-3yOH73", true)[option].click();
+                                        $(".pgo-Selection-selection-button-3yOH73", true)[option].setAttribute('data-selected', true);
+                                        selected++;
+                                    }
+                                    if (selected > 0) {
+                                        clickSendButton();
+                                    }
+                                } else {
+                                    // 不支援的類型或未找到
+                                    return;
+                                }
                             }
-                        }
+                        } catch (e) { console.log(e); }
                     } else if (xhr.readyState === 4) {
                         loadingMessage.close();
-                        var resultMessage = new Notify("error", "獲取失敗");
+                        var resultMessage = new Notify("error", "無法取得答案");
                         setTimeout(() => {
                             resultMessage.close();
                         }, 3000);
@@ -1341,7 +1346,7 @@
                         }
                     }
                     answer !== null && sendAnswer(answer);
-                } 
+                }
             }
             const ob = new MutationObserver(callback);
             ob.observe(document.body, {

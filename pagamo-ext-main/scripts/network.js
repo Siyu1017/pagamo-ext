@@ -29,6 +29,7 @@
         constructor(target = document.body) {
             this.target = target;
             this.container = document.createElement('div');
+            this.resizer = document.createElement('div');
             this.timeLine = document.createElement('div');
             this.detail = document.createElement('div');
             this.timeLineHeader = document.createElement('div');
@@ -42,6 +43,7 @@
             this.headers = ['名稱', '狀態', '方法', '類型', '發起人', '時間'];
 
             this.container.className = 'extension-devtool-network-container';
+            this.resizer.className = 'extension-devtool-network-resizer';
             this.timeLine.className = 'extension-devtool-network-timeline';
             this.detail.className = 'extension-devtool-network-detail';
             this.timeLineHeader.className = 'extension-devtool-network-header';
@@ -55,6 +57,7 @@
             this.detailClose.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="extension-devtool-network-detail-close-icon"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>`
 
             this.target.appendChild(this.container);
+            this.container.appendChild(this.resizer);
             this.container.appendChild(this.timeLine);
             this.container.appendChild(this.detail);
             this.timeLine.appendChild(this.timeLineHeader);
@@ -64,6 +67,8 @@
             this.detailNavbar.appendChild(this.detailClose);
             this.detailNavbar.appendChild(this.detailURL);
             this.detail.appendChild(this.detailContent);
+
+            this.resizeListeners = [];
 
             this.detailClose.addEventListener("click", () => {
                 this._hideDetail();
@@ -81,6 +86,29 @@
                 line.className = 'extension-devtool-network-cell';
                 this.timeLineBackground.appendChild(line);
             }
+
+            var pointerDown = false;
+            var pointerY = [];
+
+            this.resizer.addEventListener('pointerdown', (e) => {
+                pointerDown = true;
+                pointerY = e.pageY;
+            })
+
+            window.addEventListener('pointermove', (e) => {
+                if (pointerDown == true) {
+                    var height = this.container.offsetHeight + pointerY - e.pageY;
+                    this.container.style.height = height < 28 ? 28 : height > window.innerHeight ? window.innerHeight : height + 'px';
+                    pointerY = e.pageY;
+                    try {
+                        this.resizeListeners.forEach(listener => {
+                            listener(height)
+                        })
+                    } catch (e) { }
+                }
+            })
+            window.addEventListener('pointerup', (e) => { pointerDown = false; });
+            window.addEventListener('blur', () => { pointerDown = false; });
 
             this.requests = [];
             return this;
