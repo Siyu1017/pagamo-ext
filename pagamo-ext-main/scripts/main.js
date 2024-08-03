@@ -7,7 +7,7 @@
 "use strict";
 
 (() => {
-    var Extension_Version = "2.3.2";
+    var Extension_Version = "2.4.0";
 
     var networkPanel = new NetworkPanel(document.documentElement);
 
@@ -17,6 +17,12 @@
     var requests = [];
 
     window.requests = requests;
+
+    document.addEventListener('copy', function (event) {
+        const text = window.getSelection().toString();
+        event.preventDefault();
+        event.clipboardData.setData('text/plain', text);
+    });
 
     if ('sendBeacon' in navigator) {
         const originalSendBeacon = navigator.sendBeacon;

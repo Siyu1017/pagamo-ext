@@ -238,12 +238,12 @@
                         <div class="extension-devtool-network-detail-group">
                         <div class="extension-devtool-network-detail-title">酬載</div>
                         <div class="extension-devtool-network-detail-items">
-                            <div class="extension-devtool-network-detail-item">${request.body}</div>
+                            <div class="extension-devtool-network-detail-item" data-element='network-payload'></div>
                         </div>
                         <div class="extension-devtool-network-detail-group">
                             <div class="extension-devtool-network-detail-title">回應</div>
                             <div class="extension-devtool-network-detail-items">
-                                <div class="extension-devtool-network-detail-item">${request.response}</div>
+                                <div class="extension-devtool-network-detail-item" data-element='network-response'></div>
                             </div>
                         </div>
                         <div class="extension-devtool-network-detail-group">
@@ -257,6 +257,11 @@
                     </div>`
 
             this.detailContent.innerHTML = details;
+
+            var payloadViewer = new Viewer(request.body);
+            var responseViewer = new Viewer(request.response);
+            this.detailContent.querySelector('[data-element="network-payload"]').appendChild(payloadViewer.container);
+            this.detailContent.querySelector('[data-element="network-response"]').appendChild(responseViewer.container);
         }
         _hideDetail() {
             this.container.classList.remove('show-detail');

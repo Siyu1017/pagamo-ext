@@ -1,0 +1,111 @@
+.json-viewer-container {
+    font-family: monospace;
+    --default-color: #E3E2E3;
+    --key-color: #8EACF2;
+    --value-color: #8CD3F7;
+    --close: url("data:image/svg+xml,%3Csvg width='14' height='14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10.5 6.65 4.9 2.8v7.7' fill='%23000'/%3E%3C/svg%3E");
+    --open: url("data:image/svg+xml,%3Csvg width='14' height='14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m7 9.45 3.85-5.6h-7.7' fill='%23000'/%3E%3C/svg%3E");
+    color: var(--default-color);
+    line-height: 16px;
+    font-size: 12px;
+    cursor: default;
+}
+
+.json-viewer-container *::selection {
+    background: rgba(255, 255, 255, .25);
+}
+
+.json-viewer-overview {
+    display: flex;
+    align-items: center;
+}
+
+.json-viewer-key {
+    color: var(--key-color);
+}
+
+.json-viewer-key:not([data-type="large-array"])::after {
+    content: ':';
+    color: var(--default-color);
+}
+
+.json-viewer-value {
+    color: var(--value-color);
+    margin-left: 4px;
+}
+
+.json-viewer-line {
+    display: flex;
+    align-items: center;
+}
+
+[data-expandable="true"] .json-viewer-value {
+    color: var(--default-color);
+}
+
+.json-viewer-expand {
+    mask-size: auto;
+    width: 14px;
+    height: 14px;
+    transition: all .1s ease-in-out;
+    min-width: 14px;
+    min-height: 14px;
+}
+
+.json-viewer-content {
+    padding-left: 12px;
+}
+
+[data-expandable="true"] .json-viewer-expand {
+    mask-image: var(--close);
+}
+
+[data-expand="true"][data-expandable="true"] .json-viewer-expand {
+    mask-image: var(--open);
+}
+
+[data-expand="false"][data-expandable="true"] .json-viewer-expand {
+    mask-image: var(--close);
+}
+
+[data-expandable="true"] .json-viewer-expand {
+    background-color: currentColor;
+}
+
+.json-viewer-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.json-viewer-next {
+    padding-left: 12px;
+}
+
+.json-viewer-value-empty {
+    color: #6E6E6E;
+}
+
+.json-viewer-value-symbol,
+.json-viewer-value-number {
+    color: #9783F7;
+}
+
+.json-viewer-line[data-expand="true"] ~ .json-viewer-next,
+.json-viewer-overview[data-expand="true"] ~ .json-viewer-content {
+    display: block;
+}
+
+.json-viewer-line[data-expand="false"] ~ .json-viewer-next,
+.json-viewer-overview[data-expand="false"] ~ .json-viewer-content {
+    display: none;
+}
+
+.json-viewer-overview-content,
+.json-viewer-value,
+.json-viewer-key {
+    white-space: nowrap;
+}
+
+.json-viewer-value-generic {
+    color: var(--default-color);
+}
