@@ -6,9 +6,9 @@
 
 "use strict";
 
-(() => {
-    var Extension_Version = "2.4.0";
+const Extension_Version = "2.4.1";
 
+(() => {
     var networkPanel = new NetworkPanel(document.documentElement);
 
     networkPanel.container.style = "display: none;"
@@ -66,9 +66,6 @@
         stack = stack.split('\n').map(function (line) { return line.trim(); });
         return stack.splice(stack[0] == 'Error' ? 2 : 1);
     }
-
-    localStorage.getItem('pgo-ext-mode') || localStorage.setItem('pgo-ext-mode', false);
-    localStorage.getItem('pgo-ext-show-progress') || localStorage.setItem('pgo-ext-show-progress', false);
 
     ; (async () => {
         var req = async (method, url, async, headers, payloads, callback) => {
@@ -961,7 +958,7 @@
                     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
                     title: '紀錄網路活動',
                     link: 0,
-                    beta: true,
+                    new: true,
                     content: [settingComponent.useSwitch({ checked: settings.developerTools.networkActivity }, (e) => {
                         settings.developerTools.networkActivity = e.value;
                         localStorage.setItem('pagamo-extension-settings', JSON.stringify(settings));
@@ -1062,6 +1059,15 @@
                 document.getElementById('map-side-menu').style.display = settings.appearance.leftPanel == 'original' ? 'revert-layer' : 'none';
                 document.getElementById('hex_menu').style.display = settings.appearance.userMenu == 'original' ? 'revert-layer' : 'none';
             } catch (e) { return console.log(e) }
+
+            (() => {
+                if (localStorage.getItem('pagamo-extension-version')) {
+                    if (localStorage.getItem('pagamo-extension-version') == Extension_Version) {
+                        return;
+                    }
+                }
+                localStorage.setItem('pagamo-extension-version', Extension_Version);
+            })()
 
             const originalFetch = window.fetch;
 

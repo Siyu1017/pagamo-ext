@@ -141,6 +141,10 @@
 
             var id = this.requests.push(request) - 1;
             request.elements.cells['url'].addEventListener('click', (e) => {
+                this.container.querySelectorAll('.selected').forEach(selected => {
+                    selected.classList.remove('selected');
+                })
+                item.classList.add('selected');
                 this._showDetail(id);
             })
             this.timeLineList.appendChild(item);
@@ -339,7 +343,7 @@
                         element.innerText = `${Math.floor(value)} 毫秒`
                     }
                 } else {
-                    element.innerText = '待處理';
+                    element.innerHTML = '<span style="color: #9a9a9a">待處理</span>';
                 }
             } else {
                 element.innerText = value;

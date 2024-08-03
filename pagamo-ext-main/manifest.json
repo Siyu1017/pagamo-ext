@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "PaGamO Plug-in",
     "description": "一款用於提升 PaGamO 使用體驗的外掛程式，它可以幫助你提高答題效率，並提供自定義客戶端功能",
-    "version": "2.4.0",
+    "version": "2.4.1",
     "icons": {
         "16": "./logo/logo-16.png",
         "32": "./logo/logo-32.png",

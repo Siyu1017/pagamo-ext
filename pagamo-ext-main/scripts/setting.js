@@ -67,7 +67,7 @@ class settingPanel {
                 }
 
                 itemIcon.innerHTML = item.icon;
-                itemTitle.innerHTML = item.beta == true ? `${item.title}<span class='extension-setting-item-beta'>測試版</span>` : item.title;
+                itemTitle.innerHTML = item.beta == true ? `${item.title}<span class='extension-setting-item-beta'>測試版</span>` : item.new == true ? `${item.title}<span class='extension-setting-item-new'>新功能</span>` : item.title;
                 item.content.forEach(child => {
                     itemContent.appendChild(child);
                 })

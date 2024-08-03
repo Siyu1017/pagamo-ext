@@ -153,6 +153,14 @@
             type = getType(level);
         }
         var allow = true;
+        var temp = level;
+        level = Object.keys(temp).sort().reduce(
+            (obj, key) => {
+                obj[key] = temp[key];
+                return obj;
+            },
+            {}
+        );
         Object.keys(level).forEach((key, i) => {
             if (allow == false) {
                 return;
@@ -169,7 +177,7 @@
                     overview += `${key}: ${formatValue(level[key])}`;
                 }
             }
-            if (Object.values(level)[i + 1]) {
+            if (Object.keys(level)[i + 1]) {
                 overview += ', ';
             }
             if (overview.length > 50) {
@@ -227,6 +235,14 @@
                 return;
             }
         }
+        var temp = level;
+        level = Object.keys(temp).sort().reduce(
+            (obj, key) => {
+                obj[key] = temp[key];
+                return obj;
+            },
+            {}
+        );
         Object.keys(level).forEach(key => {
             var item = document.createElement('div');
             var line = document.createElement('div');

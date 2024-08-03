@@ -1,8 +1,8 @@
 {
-    "version": "2.4.0",
+    "version": "2.4.1",
     "content": [
-        "增加開發人員工具 JSON 檢視器",
-        "修復無法複製文字問題"
+        "修復樣式",
+        "修復 JSON Viewer 剖析問題"
     ],
     "level": "required"
 }

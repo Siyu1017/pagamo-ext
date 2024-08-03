@@ -114,8 +114,7 @@
     background: var(--bg-hover);
 }
 
-.extension-devtool-network-item:active,
-.extension-devtool-network-item.active {
+.extension-devtool-network-item:active {
     background: var(--bg-selected);
 }
 
@@ -370,4 +369,8 @@
 
 .extension-devtool-network-cell-icon.error {
     color: rgb(228 105 98);
+}
+
+.extension-devtool-network-item.selected {
+    background: #383b43ff !important;
 }
