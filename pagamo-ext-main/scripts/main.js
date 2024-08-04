@@ -6,7 +6,7 @@
 
 "use strict";
 
-const Extension_Version = "2.4.1";
+const Extension_Version = "2.5.0";
 
 (() => {
     var networkPanel = new NetworkPanel(document.documentElement);

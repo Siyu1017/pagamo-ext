@@ -343,6 +343,7 @@
 
 .extension-devtool-network-item {
     height: 26px;
+    min-height: 26px;
 }
 
 .extension-devtool-network-cell-icon {
@@ -373,4 +374,14 @@
 
 .extension-devtool-network-item.selected {
     background: #383b43ff !important;
+}
+
+.extension-devtool-network-resizer {
+    width: 100%;
+    height: 4px;
+    position: absolute;
+    cursor: ns-resize;
+    z-index: 9999;
+    -webkit-user-drag: none;
+    user-select: none;
 }

@@ -110,50 +110,35 @@
             window.addEventListener('pointerup', (e) => { pointerDown = false; });
             window.addEventListener('blur', () => { pointerDown = false; });
 
-            this.requests = [];
+            this.selfChange = false;
+
+            this.timeLine.addEventListener('scroll', (e) => {
+                this._updateViewport();
+            })
+
+            this.timeLine.addEventListener('pointermove', (e) => {
+                this._updateViewport();
+            })
+
+            this.timeLine.addEventListener('click', (e) => {
+                this._updateViewport();
+            })
+
+            const resizeObserver = new ResizeObserver((entries) => {
+                this._updateViewport();
+            });
+            resizeObserver.observe(this.container);
+
+            this.requests = {};
+            this.order = [];
             return this;
         }
         addRequest(request) {
-            var item = document.createElement('div');
-            item.className = 'extension-devtool-network-item';
-
-            var cells = {
-                'url': request.url,
-                'status': [request.status, request.statusCode],
-                'method': request.method,
-                'type': request.type,
-                'trace': request.trace,
-                'duration': request.duration
-            }
-
-            request.elements = {
-                item: item,
-                cells: {}
-            }
-
-            Object.keys(cells).forEach((cell, i) => {
-                var cellElement = document.createElement('div');
-                cellElement.className = 'extension-devtool-network-cell';
-                this._getCell(cell, cells[cell], cellElement, request);
-                request.elements.cells[cell] = cellElement;
-                item.appendChild(cellElement);
-            })
-
-            var id = this.requests.push(request) - 1;
-            request.elements.cells['url'].addEventListener('click', (e) => {
-                this.container.querySelectorAll('.selected').forEach(selected => {
-                    selected.classList.remove('selected');
-                })
-                item.classList.add('selected');
-                this._showDetail(id);
-            })
-            this.timeLineList.appendChild(item);
-            if (this.timeLine.scrollTop + this.timeLine.offsetHeight > this.timeLine.scrollHeight - this.timeLine.offsetHeight) {
-                this.timeLine.scrollTop = this.timeLine.scrollHeight;
-            }
-            if (request.status == 'blocked') {
-                item.classList.add('blocked');
-            }
+            var id = this._uniqueID();
+            this.order.push(id);
+            this.requests[id] = request;
+            this._getItem(id);
+            this._updateViewport();
             return id;
         }
         updateRequest(id, content) {
@@ -161,25 +146,44 @@
             if (!request) return;
 
             var elements = request.elements;
-
             this.requests[id] = content;
             this.requests[id].elements = elements;
 
-            var cells = {
-                'url': request.url,
-                'status': [request.status, request.statusCode],
-                'method': request.method,
-                'type': request.type,
-                'trace': request.trace,
-                'duration': request.duration
-            }
+            var inViewport = this._nearViewport(this.order.indexOf(id) * 26, 26);
 
-            if (request.status == 'blocked') {
-                request.elements.item.classList.add('blocked');
-            }
+            if (inViewport == true) {
+                var cells = {
+                    'url': request.url,
+                    'status': [request.status, request.statusCode],
+                    'method': request.method,
+                    'type': request.type,
+                    'trace': request.trace,
+                    'duration': request.duration
+                }
 
-            Object.keys(cells).forEach((cell, i) => {
-                this._getCell(cell, cells[cell], request.elements.cells[cell], request);
+                if (request.status == 'blocked') {
+                    request.elements.item.classList.add('blocked');
+                }
+
+                Object.keys(cells).forEach((cell, i) => {
+                    this._getCell(cell, cells[cell], request.elements.cells[cell], request);
+                })
+            }
+            this._updateViewport();
+        }
+        _updateViewport() {
+            if (this.selfChange == true) {
+                return this.selfChange = false;
+            }
+            this.selfChange = true;
+            Object.keys(this.requests).forEach(key => {
+                var inViewport = this._nearViewport(this.order.indexOf(key) * 26, 26);
+                if (inViewport == true) {
+                    this._getItem(key, true);
+                } else {
+                    this._uninstall(key);
+                }
+                this.requests[key].inViewport = inViewport;
             })
         }
         _showDetail(id) {
@@ -286,6 +290,74 @@
             if (contentType.includes('text/plain')) return type || 'generic';
             return 'generic';
         }
+        _uninstall(id) {
+            if (!id || !this.requests.hasOwnProperty(id)) {
+                return;
+            }
+            var request = this.requests[id];
+            var item = request.elements.item;
+            item.innerHTML = '';
+        }
+        _getItem(id, created = false) {
+            if (!id || !this.requests.hasOwnProperty(id)) {
+                return;
+            }
+            var request = this.requests[id];
+            var item;
+            if (created == false) {
+                item = document.createElement('div');
+                item.className = 'extension-devtool-network-item';
+                this.timeLineList.appendChild(item);
+            } else {
+                item = request.elements.item;
+            }
+
+            if (request.inViewport == true) {
+                return;
+            }
+
+            var inViewport = this._nearViewport(this.order.indexOf(id) * 26, 26);
+
+            var cells = {
+                'url': request.url,
+                'status': [request.status, request.statusCode],
+                'method': request.method,
+                'type': request.type,
+                'trace': request.trace,
+                'duration': request.duration
+            }
+
+            request.elements = {
+                item: item,
+                cells: {}
+            }
+            request.inViewport = inViewport;
+
+            if (inViewport == true) {
+                Object.keys(cells).forEach((cell, i) => {
+                    var cellElement = document.createElement('div');
+                    cellElement.className = 'extension-devtool-network-cell';
+                    this._getCell(cell, cells[cell], cellElement, request);
+                    request.elements.cells[cell] = cellElement;
+                    item.appendChild(cellElement);
+                })
+
+                request.elements.cells['url'].addEventListener('click', (e) => {
+                    this.container.querySelectorAll('.selected').forEach(selected => {
+                        selected.classList.remove('selected');
+                    })
+                    item.classList.add('selected');
+                    this._showDetail(id);
+                })
+            }
+
+            if (this.timeLine.scrollTop + this.timeLine.offsetHeight > this.timeLine.scrollHeight - this.timeLine.offsetHeight && inViewport == true && created == false) {
+                this.timeLine.scrollTop = this.timeLine.scrollHeight;
+            }
+            if (request.status == 'blocked') {
+                item.classList.add('blocked');
+            }
+        }
         _getCell(key, value, element, request) {
             if (key == 'url') {
                 var url = value;
@@ -348,6 +420,32 @@
             } else {
                 element.innerText = value;
             }
+        }
+        _uniqueID() {
+            var id = this._randomString(96);
+            if (this.requests[id]) {
+                return this._uniqueID();
+            }
+            return id;
+        }
+        _randomString(length) {
+            if (!length) return console.warn('Option Invalid');
+            var characters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'p', 'Q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '2', '3', '4', '5', '6', '7', '8', '9'],
+                str = '';
+            for (let i = 0; i < length; i++) {
+                str += characters[Math.floor(Math.random() * characters.length)];
+            }
+            return str;
+        }
+        _getViewport() {
+            return {
+                from: this.timeLine.scrollTop,
+                to: this.timeLine.scrollTop + this.timeLine.offsetHeight
+            }
+        }
+        _nearViewport(y, height = 26) {
+            var viewport = this._getViewport();
+            return viewport.from - this.timeLine.offsetHeight <= y + height && y <= viewport.to + this.timeLine.offsetHeight;
         }
     }
 
